@@ -61,10 +61,10 @@ namespace NActTests.SystemTests
                         rightList[i] = input[i + leftList.Length];
                     }
 
-                    m_Left = ThreaderWrapper.CreateActor(() => new MergerSortor<T>(leftList));
-                    m_Right = ThreaderWrapper.CreateActor(() => new MergerSortor<T>(rightList));
+                    //m_Left = ThreaderWrapper.CreateActor(() => new MergerSortor<T>(leftList));
+                    //m_Right = ThreaderWrapper.CreateActor(() => new MergerSortor<T>(rightList));
                     
-                    m_Left.ResultFound += 
+                    //m_Left.ResultFound += 
                 }
             }
 
