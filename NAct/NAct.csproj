@@ -49,6 +49,8 @@
   <ItemGroup>
     <Compile Include="CreatorInterceptor.cs" />
     <Compile Include="IActor.cs" />
+    <Compile Include="IInvocationHandler.cs" />
+    <Compile Include="MethodProxyFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThreaderInterceptor.cs" />
     <Compile Include="ThreaderWrapper.cs" />

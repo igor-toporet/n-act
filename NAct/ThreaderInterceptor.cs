@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading;
 using Castle.Core.Interceptor;
 using Castle.DynamicProxy;
@@ -66,6 +67,36 @@ namespace NAct
             return null;
         }
 
+        /// <summary>
+        /// Checks an object for being a callback, and proxies it to move to the right thread if it is
+        /// </summary>
+        /// <param name="original">The original object that's might be a callback</param>
+        /// <param name="parameterType">The static type of the parameter in which that object sits</param>
+        /// <returns>The object that should now be the parameter, either just original, or a proxy for it if it was a callback</returns>
+        private static object ConvertParameter(object original, Type parameterType)
+        {
+            // See if this parameter is, or is in, an actor
+            IActor rootForObject = RootForObject(original);
+
+            if (rootForObject != null)
+            {
+                Delegate originalAsDelegate = original as Delegate;
+                if (originalAsDelegate != null)
+                {
+                    // Special case for delegates: make a new delegate that calls the existing one in the right thread
+                    
+                }
+                else
+                {
+                    // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
+                    ThreaderInterceptor callbackInterceptor = new ThreaderInterceptor(original, rootForObject);
+                    return new ProxyGenerator().CreateInterfaceProxyWithoutTarget(parameterType, callbackInterceptor);
+                }
+            }
+
+            return original;
+        }
+
         public void Intercept(IInvocation invocation)
         {
             // A method has been called on the proxy
@@ -77,26 +108,7 @@ namespace NAct
                 object eachParameter = invocation.Arguments[i];
                 if (eachParameter != null)
                 {
-                    // See if this parameter is, or is in, the calling actor
-                    IActor rootForObject = RootForObject(eachParameter);
-
-                    if (rootForObject != null)
-                    {
-                        // Yep, this object needs to be wrapped to move back to the calling actor's logical thread when it's used
-                        ThreaderInterceptor callbackInterceptor = new ThreaderInterceptor(eachParameter, rootForObject);
-                        if (eachParameterType.ParameterType.IsInterface)
-                        {
-                            invocation.Arguments[i] =
-                                new ProxyGenerator().CreateInterfaceProxyWithoutTarget(eachParameterType.ParameterType,
-                                                                                       callbackInterceptor);
-                        }
-                        else
-                        {
-                            invocation.Arguments[i] =
-                                new ProxyGenerator().CreateClassProxy(eachParameterType.ParameterType,
-                                                                      callbackInterceptor);
-                        }
-                    }
+                    invocation.Arguments[i] = ConvertParameter(eachParameter, eachParameterType.ParameterType);
                 }
     		}
 
