@@ -82,7 +82,7 @@ namespace NAct
 
                     if (rootForObject != null)
                     {
-                        // Yep, this object needs to be wrapped tomove back to the calling actor's logical thread when it's used
+                        // Yep, this object needs to be wrapped to move back to the calling actor's logical thread when it's used
                         ThreaderInterceptor callbackInterceptor = new ThreaderInterceptor(eachParameter, rootForObject);
                         if (eachParameterType.ParameterType.IsInterface)
                         {
