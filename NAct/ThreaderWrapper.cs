@@ -10,13 +10,20 @@ namespace NAct
         /// This call does not wait for the creator to run, this is done asynchronously. However, any other methods called
         /// on the actor will not be processed until after the creator has run.
         /// </summary>
-        /// <typeparam name="TInterface">The interface of the actor to create.</typeparam>
+        /// <typeparam name="TActorType">The interface of the actor to create.</typeparam>
         /// <param name="creator">A function that creates a fresh instance of an object implementing TInterface.</param>
         /// <returns>An actor of type TInterface. The creator may not have run yet, but method calls on it will safely be queued for once it is created.</returns>
-        public static TInterface CreateActor<TInterface>(ObjectCreator<IActor> creator) where TInterface : class, IActor
+        public static TActorType CreateActor<TActorType>(ObjectCreator<IActor> creator) where TActorType : class, IActor
         {
             CreatorInterceptor interceptor = new CreatorInterceptor(creator);
-            return new ProxyGenerator().CreateInterfaceProxyWithoutTarget<TInterface>(interceptor);
+            if (typeof(TActorType).IsInterface)
+            {
+                return new ProxyGenerator().CreateInterfaceProxyWithoutTarget<TActorType>(interceptor);
+            }
+            else
+            {
+                return new ProxyGenerator().CreateClassProxy<TActorType>(interceptor);
+            }
         }
     }
 

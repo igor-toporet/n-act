@@ -84,11 +84,20 @@ namespace NAct
                     {
                         // Yep, this object needs to be wrapped tomove back to the calling actor's logical thread when it's used
                         ThreaderInterceptor callbackInterceptor = new ThreaderInterceptor(eachParameter, rootForObject);
-                        invocation.Arguments[i] =
-                            new ProxyGenerator().CreateInterfaceProxyWithoutTarget(eachParameterType.ParameterType,
-                                                                                   callbackInterceptor);
+                        if (eachParameterType.ParameterType.IsInterface)
+                        {
+                            invocation.Arguments[i] =
+                                new ProxyGenerator().CreateInterfaceProxyWithoutTarget(eachParameterType.ParameterType,
+                                                                                       callbackInterceptor);
+                        }
+                        else
+                        {
+                            invocation.Arguments[i] =
+                                new ProxyGenerator().CreateClassProxy(eachParameterType.ParameterType,
+                                                                      callbackInterceptor);
+                        }
                     }
-    			}
+                }
     		}
 
     		// Get the information from the current thread about what's going on in the stack, to give to the new thread
