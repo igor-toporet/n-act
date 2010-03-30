@@ -48,8 +48,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CreatorInterceptor.cs" />
+    <Compile Include="CreatorInterfaceInvocationHandler.cs" />
     <Compile Include="IActor.cs" />
-    <Compile Include="IInvocationHandler.cs" />
+    <Compile Include="IInterfaceInvocationHandler.cs" />
+    <Compile Include="IMethodInvocationHandler.cs" />
+    <Compile Include="InterfaceInvocationHandler.cs" />
+    <Compile Include="InterfaceProxyFactory.cs" />
+    <Compile Include="MethodInvocationHandler.cs" />
     <Compile Include="MethodProxyFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThreaderInterceptor.cs" />

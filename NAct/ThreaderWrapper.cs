@@ -25,6 +25,14 @@ namespace NAct
                 return new ProxyGenerator().CreateClassProxy<TActorType>(interceptor);
             }
         }
+
+        /// <summary>
+        /// Creates a proxy object that, for each public method of the original object, fixes up the thread.
+        /// </summary>
+        internal static TActorType WrapActor<TActorType>(object original, IActor rootForObject)
+        {
+            
+        }
     }
 
     public delegate T ObjectCreator<T>();

@@ -50,6 +50,8 @@ namespace NActTests.SystemTests
 
             public void Ping()
             {
+                Console.WriteLine("Ping on thread: " + Thread.CurrentThread.ManagedThreadId);
+
                 m_Ponger.Pong();
             }
         }
@@ -60,6 +62,8 @@ namespace NActTests.SystemTests
 
             public void Pong()
             {
+                Console.WriteLine("Pong on thread: " + Thread.CurrentThread.ManagedThreadId);
+
                 m_Count++;
                 InvokePonged();
             }

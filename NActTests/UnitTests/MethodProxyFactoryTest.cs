@@ -17,7 +17,7 @@ namespace NActTests.UnitTests
         {
             // Make the proxy method
             MyStaticMethodDelegate proxyDelegate =
-                (MyStaticMethodDelegate) MethodProxyFactory.CreateMethodProxy<MyStaticMethodDelegate>(new MyStaticMethodInvocationHandler(this), s_MyStaticMethodInfo);
+                (MyStaticMethodDelegate) new MethodProxyFactory().CreateMethodProxy(new MyStaticMethodInvocationHandler(this), s_MyStaticMethodInfo, typeof(MyStaticMethodDelegate));
 
             EventForMyStaticMethodToSignUpTo += proxyDelegate;
 
@@ -26,7 +26,7 @@ namespace NActTests.UnitTests
             Assert.IsTrue(m_InvokeHappenedCalled);
         }
 
-        private class MyStaticMethodInvocationHandler : IInvocationHandler
+        private class MyStaticMethodInvocationHandler : IMethodInvocationHandler
         {
             private readonly MethodProxyFactoryTest m_Parent;
 
