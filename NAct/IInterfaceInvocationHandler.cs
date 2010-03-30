@@ -4,6 +4,9 @@ namespace NAct
 {
     public interface IInterfaceInvocationHandler
     {
-        void InvokeHappened(MethodInfo method, object[] parameterValues);
+        /// <summary>
+        /// Gets something that can handle the invocation of the given method. TODO This call may block while waiting for the actor to be instantiated
+        /// </summary>
+        IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method);
     }
 }

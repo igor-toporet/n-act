@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading;
-using Castle.DynamicProxy;
 
 namespace NAct
 {
@@ -13,12 +12,12 @@ namespace NAct
         private readonly IActor m_Root;
         private readonly object m_Wrapped;
         private readonly MethodInfo m_MethodBeingProxied;
-        private readonly MethodProxyFactory m_MethodProxyFactory;
+        private readonly ProxyFactory m_ProxyFactory;
 
-        public MethodInvocationHandler(IActor root, object wrapped, MethodInfo methodBeingProxied, MethodProxyFactory methodProxyFactory)
+        public MethodInvocationHandler(IActor root, object wrapped, MethodInfo methodBeingProxied, ProxyFactory proxyFactory)
         {
             m_Root = root;
-            m_MethodProxyFactory = methodProxyFactory;
+            m_ProxyFactory = proxyFactory;
             m_MethodBeingProxied = methodBeingProxied;
             m_Wrapped = wrapped;
         }
@@ -82,14 +81,14 @@ namespace NAct
                 if (originalAsDelegate != null)
                 {
                     // Special case for delegates: make a new delegate that calls the existing one in the right thread
-                    MethodInvocationHandler methodInvocationHandler = new MethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_MethodProxyFactory);
-                    return m_MethodProxyFactory.CreateMethodProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
+                    MethodInvocationHandler methodInvocationHandler = new MethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_ProxyFactory);
+                    return m_ProxyFactory.CreateMethodProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
                 {
                     // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
-                    InterfaceInvocationHandler callbackInterceptor = new InterfaceInvocationHandler(original, rootForObject, m_MethodProxyFactory);
-                    return new InterfaceProxyFactory().CreateInterfaceProxy(callbackInterceptor, original.GetType());
+                    InterfaceInvocationHandler callbackInterceptor = new InterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
+                    return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, original.GetType());
                 }
             }
 

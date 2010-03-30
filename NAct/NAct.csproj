@@ -34,30 +34,20 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core, Version=1.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Referenced Dlls\Release\Castle.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.DynamicProxy2, Version=2.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Referenced Dlls\Release\Castle.DynamicProxy2.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CreatorInterceptor.cs" />
     <Compile Include="CreatorInterfaceInvocationHandler.cs" />
     <Compile Include="IActor.cs" />
     <Compile Include="IInterfaceInvocationHandler.cs" />
     <Compile Include="IMethodInvocationHandler.cs" />
     <Compile Include="InterfaceInvocationHandler.cs" />
-    <Compile Include="InterfaceProxyFactory.cs" />
     <Compile Include="MethodInvocationHandler.cs" />
-    <Compile Include="MethodProxyFactory.cs" />
+    <Compile Include="ObjectCreator.cs" />
+    <Compile Include="ProxyFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ThreaderInterceptor.cs" />
     <Compile Include="ThreaderWrapper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

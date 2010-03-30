@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -17,7 +18,7 @@ namespace NAct
         /// 
         /// This will trigger its asynchronous construction.
         /// </summary>
-        public CreatorInterfaceInvocationHandler(ObjectCreator<IActor> creator, MethodProxyFactory methodProxyFactory)
+        public CreatorInterfaceInvocationHandler(ObjectCreator<IActor> creator, ProxyFactory proxyFactory)
         {
             ThreadPool.QueueUserWorkItem(
                 delegate
@@ -25,7 +26,7 @@ namespace NAct
                         lock (m_Sync)
                         {
                             IActor newObject = creator();
-                            InterfaceInvocationHandler temp = new InterfaceInvocationHandler(newObject, newObject, methodProxyFactory);
+                            InterfaceInvocationHandler temp = new InterfaceInvocationHandler(newObject, newObject, proxyFactory);
 
                             // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
                             // assigning it to the field, so that unsynchronised access to it is safe.
@@ -36,7 +37,7 @@ namespace NAct
                     });
         }
 
-        public void InvokeHappened(MethodInfo method, object[] parameterValues)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
         {
             if (m_RealInvocationHandler == null)
             {
@@ -52,7 +53,7 @@ namespace NAct
             }
 
             // Now m_RealInvocationHandler is definitely finished, forward to it
-            m_RealInvocationHandler.InvokeHappened(method, parameterValues);
+            return m_RealInvocationHandler.GetInvocationHandlerFor(method);
         }
     }
 }

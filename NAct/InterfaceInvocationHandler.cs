@@ -8,21 +8,19 @@ namespace NAct
     {
         private readonly object m_Original;
         private readonly IActor m_RootForObject;
-        private readonly MethodProxyFactory m_MethodProxyFactory;
+        private readonly ProxyFactory m_ProxyFactory;
 
-        public InterfaceInvocationHandler(object original, IActor rootForObject, MethodProxyFactory methodProxyFactory)
+        public InterfaceInvocationHandler(object original, IActor rootForObject, ProxyFactory proxyFactory)
         {
             m_Original = original;
-            m_MethodProxyFactory = methodProxyFactory;
+            m_ProxyFactory = proxyFactory;
             m_RootForObject = rootForObject;
         }
 
-        public void InvokeHappened(MethodInfo method, object[] parameterValues)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
         {
-            // Wasteful - create new MethodInvocationHandlers for each invocation
-            IMethodInvocationHandler handler = new MethodInvocationHandler(m_RootForObject, m_Original, method,
-                                                                           m_MethodProxyFactory);
-            handler.InvokeHappened(parameterValues);
+            // TODO Wasteful - create new MethodInvocationHandlers for each invocation
+            return new MethodInvocationHandler(m_RootForObject, m_Original, method, m_ProxyFactory);
         }
     }
 }
