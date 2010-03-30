@@ -2,7 +2,7 @@
 
 namespace NAct
 {
-    interface IInterfaceInvocationHandler
+    public interface IInterfaceInvocationHandler
     {
         void InvokeHappened(MethodInfo method, object[] parameterValues);
     }

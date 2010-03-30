@@ -89,7 +89,7 @@ namespace NAct
                 {
                     // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
                     InterfaceInvocationHandler callbackInterceptor = new InterfaceInvocationHandler(original, rootForObject, m_MethodProxyFactory);
-                    return new ProxyGenerator().CreateInterfaceProxyWithoutTarget(original.GetType(), callbackInterceptor);
+                    return new InterfaceProxyFactory().CreateInterfaceProxy(callbackInterceptor, original.GetType());
                 }
             }
 

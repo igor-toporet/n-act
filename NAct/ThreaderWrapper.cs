@@ -1,9 +1,9 @@
-﻿using Castle.DynamicProxy;
-
-namespace NAct
+﻿namespace NAct
 {
     public static class ThreaderWrapper
     {
+        private static readonly MethodProxyFactory s_GlobalMethodProxyFactory = new MethodProxyFactory();
+
         /// <summary>
         /// Creates a logical thread for a new actor, and then uses creator to instantiate the root object to form that actor.
         /// 
@@ -15,23 +15,8 @@ namespace NAct
         /// <returns>An actor of type TInterface. The creator may not have run yet, but method calls on it will safely be queued for once it is created.</returns>
         public static TActorType CreateActor<TActorType>(ObjectCreator<IActor> creator) where TActorType : class, IActor
         {
-            CreatorInterceptor interceptor = new CreatorInterceptor(creator);
-            if (typeof(TActorType).IsInterface)
-            {
-                return new ProxyGenerator().CreateInterfaceProxyWithoutTarget<TActorType>(interceptor);
-            }
-            else
-            {
-                return new ProxyGenerator().CreateClassProxy<TActorType>(interceptor);
-            }
-        }
-
-        /// <summary>
-        /// Creates a proxy object that, for each public method of the original object, fixes up the thread.
-        /// </summary>
-        internal static TActorType WrapActor<TActorType>(object original, IActor rootForObject)
-        {
-            
+            CreatorInterfaceInvocationHandler creatorInvocationHandler = new CreatorInterfaceInvocationHandler(creator, s_GlobalMethodProxyFactory);
+            return (TActorType) new InterfaceProxyFactory().CreateInterfaceProxy(creatorInvocationHandler, typeof(TActorType));
         }
     }
 

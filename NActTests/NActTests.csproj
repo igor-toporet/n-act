@@ -48,6 +48,7 @@
     <Compile Include="SystemTests\PingPong.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SystemTests\Sort.cs" />
+    <Compile Include="UnitTests\InterfaceProxyFactoryTest.cs" />
     <Compile Include="UnitTests\MethodProxyFactoryTest.cs" />
   </ItemGroup>
   <ItemGroup />
