@@ -42,6 +42,11 @@ namespace NAct
                 throw new InvalidOperationException("The type " + interfaceType + " is not an interface, so an actor cannot be created for it.");
             }
 
+            if (!interfaceType.IsPublic)
+            {
+                throw new InvalidOperationException("The interface " + interfaceType + " is not public, so an actor cannot be created for it.");
+            }
+
             TypeBuilder typeBuilder = GetFreshType();
 
             ForEveryMethodIncludingSuperInterfaces(
