@@ -36,17 +36,40 @@ namespace NAct
         /// </summary>
         public object CreateInterfaceProxy(IInterfaceInvocationHandler invocationHandler, Type interfaceType)
         {
+            if (!interfaceType.IsInterface)
+            {
+                // Only allowing interfaces for the moment, fail fast
+                throw new InvalidOperationException("The type " + interfaceType + " is not an interface, so an actor cannot be created for it.");
+            }
+
             TypeBuilder typeBuilder = GetFreshType();
 
-            foreach (MethodInfo eachMethod in interfaceType.GetMethods())
-            {
-                // Create a field in which to put the IMethodInvocationHandler
-                FieldBuilder invocationHandlerField = typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod), typeof (IMethodInvocationHandler),
-                                                                                FieldAttributes.Private | FieldAttributes.Static);
-                Type[] parameterTypes = GetParameterTypes(eachMethod);
-                MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name, eachMethod.Attributes & ~MethodAttributes.Abstract, eachMethod.ReturnType, parameterTypes);
-                BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod, invocationHandlerField);
-            }
+            ForEveryMethodIncludingSuperInterfaces(
+                interfaceType,
+                delegate(MethodInfo eachMethod)
+                    {
+                        if (eachMethod.ReturnType != typeof (void))
+                        {
+                            // The method has a return type, fail fast
+                            throw new InvalidOperationException("The interface " + interfaceType +
+                                                                " contains the method " +
+                                                                eachMethod +
+                                                                " which has a non-void return type. Actors may only have methods with void return types.");
+                        }
+
+                        // Create a field in which to put the IMethodInvocationHandler
+                        FieldBuilder invocationHandlerField =
+                            typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                    typeof (IMethodInvocationHandler),
+                                                    FieldAttributes.Private | FieldAttributes.Static);
+                        Type[] parameterTypes = GetParameterTypes(eachMethod);
+                        MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
+                                                                               eachMethod.Attributes &
+                                                                               ~MethodAttributes.Abstract,
+                                                                               eachMethod.ReturnType, parameterTypes);
+                        BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
+                                             invocationHandlerField);
+                    });
 
             typeBuilder.AddInterfaceImplementation(interfaceType);
 
@@ -54,15 +77,32 @@ namespace NAct
             Type createdType = typeBuilder.CreateType();
 
             // Now we can write all the invocation handlers
-            foreach (MethodInfo eachMethod in interfaceType.GetMethods())
+            for (Type typeBeingHarvested = interfaceType; typeBeingHarvested != null; typeBeingHarvested = typeBeingHarvested.BaseType)
             {
-                FieldInfo writeableInvocationHandlerField = createdType.GetField(InvocationHandlerNameForMethod(eachMethod),
-                                                                                 BindingFlags.Static |
-                                                                                 BindingFlags.NonPublic);
-                writeableInvocationHandlerField.SetValue(null, invocationHandler.GetInvocationHandlerFor(eachMethod));
+                foreach (MethodInfo eachMethod in interfaceType.GetMethods())
+                {
+                    FieldInfo writeableInvocationHandlerField =
+                        createdType.GetField(InvocationHandlerNameForMethod(eachMethod),
+                                             BindingFlags.Static |
+                                             BindingFlags.NonPublic);
+                    writeableInvocationHandlerField.SetValue(null, invocationHandler.GetInvocationHandlerFor(eachMethod));
+                }
             }
 
             return Activator.CreateInstance(createdType);
+        }
+
+        private void ForEveryMethodIncludingSuperInterfaces(Type interfaceType, Action<MethodInfo> todo)
+        {
+            foreach (Type eachSuperInterface in interfaceType.GetInterfaces())
+            {
+                ForEveryMethodIncludingSuperInterfaces(eachSuperInterface, todo);
+            }
+
+            foreach (MethodInfo eachMethod in interfaceType.GetMethods())
+            {
+                todo(eachMethod);
+            }
         }
 
         private static string InvocationHandlerNameForMethod(MethodInfo method)

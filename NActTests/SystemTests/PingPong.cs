@@ -24,14 +24,14 @@ namespace NActTests.SystemTests
 
         public interface IPinger : IActor
         {
-            void Ping();
+            int Ping();
         }
 
         public interface IPonger : IActor
         {
             void Pong();
-            
-            event Action Ponged;
+
+            event ObjectCreator<int> Ponged;
 
             void Count(Action<int> callback);
         }
@@ -48,9 +48,11 @@ namespace NActTests.SystemTests
                 m_Ponger.Ponged += Ping;
             }
 
-            public void Ping()
+            public int Ping()
             {
                 m_Ponger.Pong();
+
+                return 42;
             }
         }
 
@@ -69,11 +71,11 @@ namespace NActTests.SystemTests
                 callback(m_Count);
             }
 
-            public event Action Ponged;
+            public event ObjectCreator<int> Ponged;
 
             private void InvokePonged()
             {
-                Action handler = Ponged;
+                ObjectCreator<int> handler = Ponged;
                 if (handler != null) handler();
             }
         }
