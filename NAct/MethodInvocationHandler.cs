@@ -50,16 +50,17 @@ namespace NAct
 
             // The object isn't an actor or a delegate, but maybe it has the parent actor in a field
             // (anonymous delegates do this often)
-            Type type = anObject.GetType();
+            // Disallow for now, as we can't guarantee there's a suitable interface
+            //Type type = anObject.GetType();
 
-            foreach (FieldInfo eachField in type.GetFields())
-            {
-                if (eachField.FieldType.IsSubclassOf(typeof(IActor)))
-                {
-                    // This field is an actor, give that
-                    return (IActor)eachField.GetValue(anObject);
-                }
-            }
+            //foreach (FieldInfo eachField in type.GetFields())
+            //{
+            //    if (eachField.FieldType.IsSubclassOf(typeof(IActor)))
+            //    {
+            //        // This field is an actor, give that
+            //        return (IActor)eachField.GetValue(anObject);
+            //    }
+            //}
 
             // No joy, is probably just a random (immutable I hope) variable
             return null;
@@ -88,7 +89,24 @@ namespace NAct
                 {
                     // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
                     InterfaceInvocationHandler callbackInterceptor = new InterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
-                    return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, original.GetType());
+
+                    // Find the object's interface which implements IActor (it might have others, but this is the important one
+                    Type interfaceType = null;
+                    foreach (Type eachInterface in original.GetType().GetInterfaces())
+                    {
+                        if (eachInterface.IsAssignableFrom(typeof(IActor)))
+                        {
+                            interfaceType = eachInterface;
+                            break;
+                        }
+                    }
+
+                    if (interfaceType == null)
+                    {
+                        throw new ApplicationException("NAct encountered an internal inconsistency and will eat your cake.");
+                    }
+
+                    return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, interfaceType);
                 }
             }
 
