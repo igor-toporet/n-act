@@ -62,8 +62,6 @@ namespace NAct
                 writeableInvocationHandlerField.SetValue(null, invocationHandler.GetInvocationHandlerFor(eachMethod));
             }
 
-            m_DynamicAssembly.Save("dynamic.dll");
-
             return Activator.CreateInstance(createdType);
         }
 
