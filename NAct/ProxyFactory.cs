@@ -10,6 +10,7 @@ namespace NAct
         private const string c_DelegateMethodName = "ProxyMethod";
 
         private readonly MethodInfo m_InvokeHappenedMethod = typeof(IMethodInvocationHandler).GetMethod("InvokeHappened");
+        private readonly MethodInfo m_GetterInvokedMethod = typeof(ISubInterfaceMethodInvocationHandler).GetMethod("GetterInvoked");
         private readonly AssemblyBuilder m_DynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("NActDynamicAssembly"), AssemblyBuilderAccess.RunAndSave);
         private readonly ModuleBuilder m_DynamicModule;
 
@@ -53,7 +54,7 @@ namespace NAct
                 interfaceType,
                 delegate(MethodInfo eachMethod)
                     {
-                        if (eachMethod.ReturnType != typeof (void))
+                        if (eachMethod.ReturnType != typeof (void) && !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType))
                         {
                             // The method has a return type, fail fast
                             throw new InvalidOperationException("The interface " + interfaceType +
@@ -62,18 +63,31 @@ namespace NAct
                                                                 " which has a non-void return type. Actors may only have methods with void return types.");
                         }
 
-                        // Create a field in which to put the IMethodInvocationHandler
-                        FieldBuilder invocationHandlerField =
-                            typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                    typeof (IMethodInvocationHandler),
-                                                    FieldAttributes.Private | FieldAttributes.Static);
                         Type[] parameterTypes = GetParameterTypes(eachMethod);
                         MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
-                                                                               eachMethod.Attributes &
-                                                                               ~MethodAttributes.Abstract,
+                                                                               eachMethod.Attributes & ~MethodAttributes.Abstract,
                                                                                eachMethod.ReturnType, parameterTypes);
-                        BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
-                                             invocationHandlerField);
+
+                        if (eachMethod.ReturnType == typeof(void))
+                        {
+                            // This is an asynchronous call, use the appropriate IMethodInvocationHandler to move it to the right thread
+                            // Create a field in which to put the IMethodInvocationHandler
+                            FieldBuilder invocationHandlerField =
+                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                        typeof (IMethodInvocationHandler),
+                                                        FieldAttributes.Private | FieldAttributes.Static);
+                            BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
+                                                 invocationHandlerField);
+                        }
+                        else
+                        {
+                            // This is a request for a subinterface - create a method that will return a proxied version of it
+                            FieldBuilder invocationHandlerField =
+                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                        typeof(ISubInterfaceMethodInvocationHandler),
+                                                        FieldAttributes.Private | FieldAttributes.Static);
+                            BuildForwarderMethod(methodBuilder, parameterTypes, m_GetterInvokedMethod, invocationHandlerField);
+                        }
                     });
 
             typeBuilder.AddInterfaceImplementation(interfaceType);
