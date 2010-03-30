@@ -4,7 +4,7 @@ using System.Reflection.Emit;
 
 namespace NAct
 {
-    public class MethodProxyFactory
+    public class ProxyFactory
     {
         private const string c_FieldNameForInvocationHandler = "s_InvocationHandler";
         private const string c_MethodName = "ProxyMethod";
@@ -15,9 +15,22 @@ namespace NAct
 
         private int m_TypeIndex = 0;
 
-        public MethodProxyFactory()
+        public ProxyFactory()
         {
             m_DynamicModule = m_DynamicAssembly.DefineDynamicModule("dynamic.dll", "dynamic.dll");
+        }
+        
+        /// <summary>
+        /// Creates something that implements the given interface, and forwards all calls to the invocationHandler
+        /// </summary>
+        public object CreateInterfaceProxy(IInterfaceInvocationHandler invocationHandler, Type interfaceType)
+        {
+            foreach (MethodInfo eachMethod in interfaceType.GetMethods())
+            {
+                
+            }
+
+            return new object();
         }
 
         /// <summary>
@@ -28,57 +41,14 @@ namespace NAct
         /// <param name="delegateType">The specific type of the delegate you'd like to create (it's safe to cast the return value to this type)</param>
         public Delegate CreateMethodProxy(IMethodInvocationHandler methodInvocationHandler, MethodInfo signature, Type delegateType)
         {
-            ParameterInfo[] delegateParameterInfos = signature.GetParameters();
-            Type[] delegateParameterTypes = new Type[delegateParameterInfos.Length];
-            for (int i = 0; i < delegateParameterTypes.Length; i++)
-            {
-                delegateParameterTypes[i] = delegateParameterInfos[i].ParameterType;
-            }
-            
-            TypeBuilder typeBuilder = m_DynamicModule.DefineType("DynamicType" + m_TypeIndex);
+            TypeBuilder typeBuilder = m_DynamicModule.DefineType("DelegateType" + m_TypeIndex);
             m_TypeIndex++;
 
-            // Create a static field in which to put the IMethodInvocationHandler
+            // Create a field in which to put the IMethodInvocationHandler
             FieldBuilder invocationHandlerField = typeBuilder.DefineField(c_FieldNameForInvocationHandler, typeof (IMethodInvocationHandler),
                                                                             FieldAttributes.Private | FieldAttributes.Static);
 
-            MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_MethodName, MethodAttributes.Public | MethodAttributes.Static, signature.ReturnType, delegateParameterTypes);
-            //DynamicMethod proxyMethod = new DynamicMethod("Proxy", signature.ReturnType, delegateParameterTypes, m_DynamicModule);
-            ILGenerator ilGenerator = methodBuilder.GetILGenerator();
-
-            // Push the IMethodInvocationHandler (needs to be lower on the stack than the array)
-            ilGenerator.Emit(OpCodes.Ldsfld, invocationHandlerField);
-
-            // Create an array to put all the parameters in
-            ilGenerator.Emit(OpCodes.Ldc_I4, delegateParameterTypes.Length);
-            ilGenerator.Emit(OpCodes.Newarr, typeof(object));
-
-            // Put the parameters into the array
-            for (int i = 0; i < delegateParameterTypes.Length; i++)
-            {
-                // Duplicate the array reference so the next iteration can use it
-                ilGenerator.Emit(OpCodes.Dup);
-
-                // Push the index in the array to be stored
-                ilGenerator.Emit(OpCodes.Ldc_I4, i);
-
-                // Push the variable itself
-                ilGenerator.Emit(OpCodes.Ldarg, (short) i);
-
-                if (delegateParameterTypes[i].IsValueType)
-                {
-                    ilGenerator.Emit(OpCodes.Box, delegateParameterTypes[i]);
-                }
-
-                // And store!
-                ilGenerator.Emit(OpCodes.Stelem_Ref);
-            }
-
-            // Make the call
-            ilGenerator.EmitCall(OpCodes.Callvirt, m_InvocationHappenedMethod, null);
-
-            // And the ret
-            ilGenerator.Emit(OpCodes.Ret);
+            AddForwarderMethod(typeBuilder, signature, m_InvocationHappenedMethod, invocationHandlerField);
 
             // Save the module for debugging
             Type createdType = typeBuilder.CreateType();
@@ -86,6 +56,55 @@ namespace NAct
             writeableInvocationHandlerField.SetValue(null, methodInvocationHandler);
 
             return Delegate.CreateDelegate(delegateType, createdType.GetMethod(c_MethodName));
+        }
+
+        private static void AddForwarderMethod(TypeBuilder typeBuilder, MethodInfo signature, MethodInfo toForwardToMethod, FieldInfo toForwardField)
+        {
+            ParameterInfo[] parameterInfos = signature.GetParameters();
+            Type[] parameterTypes = new Type[parameterInfos.Length];
+            for (int i = 0; i < parameterTypes.Length; i++)
+            {
+                parameterTypes[i] = parameterInfos[i].ParameterType;
+            }
+
+            MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_MethodName, MethodAttributes.Public | MethodAttributes.Static, signature.ReturnType, parameterTypes);
+
+            ILGenerator ilGenerator = methodBuilder.GetILGenerator();
+
+            // Push the IMethodInvocationHandler (needs to be lower on the stack than the array)
+            ilGenerator.Emit(OpCodes.Ldsfld, toForwardField);
+
+            // Create an array to put all the parameters in
+            ilGenerator.Emit(OpCodes.Ldc_I4, parameterTypes.Length);
+            ilGenerator.Emit(OpCodes.Newarr, typeof(object));
+
+            // Put the parameters into the array
+            for (int i = 0; i < parameterTypes.Length; i++)
+            {
+                // Duplicate the array reference so the next iteration can use it
+                ilGenerator.Emit(OpCodes.Dup);
+
+                // Push the array index
+                ilGenerator.Emit(OpCodes.Ldc_I4, i);
+
+                // Push the variable itself
+                ilGenerator.Emit(OpCodes.Ldarg, (short) i);
+
+                if (parameterTypes[i].IsValueType)
+                {
+                    // Need to box value types
+                    ilGenerator.Emit(OpCodes.Box, parameterTypes[i]);
+                }
+
+                // And store!
+                ilGenerator.Emit(OpCodes.Stelem_Ref);
+            }
+
+            // Make the call
+            ilGenerator.EmitCall(OpCodes.Callvirt, toForwardToMethod, null);
+
+            // And the ret
+            ilGenerator.Emit(OpCodes.Ret);
         }
     }
 }
