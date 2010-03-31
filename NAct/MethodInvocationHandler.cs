@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 
@@ -55,6 +56,9 @@ namespace NAct
                         return (IActor)eachField.GetValue(objectAsDelegate.Target);
                     }
                 }
+
+                // None of the fields are actors, see whether we have any fields of our containing type which might in turn be part of an actor
+                return RootInNestedTypeField(objectAsDelegate.Target);
             }
 
             // The object isn't an actor or a delegate, but maybe it has the parent actor in a field
@@ -72,6 +76,37 @@ namespace NAct
             //}
 
             // No joy, is probably just a random (immutable I hope) variable
+            return null;
+        }
+
+        /// <summary>
+        /// Searches the fields of anObject for one that is of it's declaring type
+        /// </summary>
+        /// <param name="anObject"></param>
+        /// <returns></returns>
+        private static IActor RootInNestedTypeField(object anObject)
+        {
+            IActor objectAsActor = anObject as IActor;
+            if (objectAsActor != null)
+            {
+                // The parameter itself is an actor, give that
+                return objectAsActor;
+            }
+
+            Type type = anObject.GetType();
+            foreach (FieldInfo eachField in type.GetFields())
+            {
+                if (eachField.FieldType == type.DeclaringType)
+                {
+                    // The field is the type of our declaring type, search the field's contents for actors
+                    IActor possibleRoot = RootInNestedTypeField(eachField.GetValue(anObject));
+                    if (possibleRoot != null)
+                    {
+                        return possibleRoot;
+                    }
+                }
+            }
+
             return null;
         }
 
