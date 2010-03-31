@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -61,7 +62,7 @@ namespace NAct
                     });
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
+        private void WaitForConstruction()
         {
             if (m_RealInvocationHandler == null)
             {
@@ -70,14 +71,26 @@ namespace NAct
                 {
                     while (m_RealInvocationHandler == null)
                     {
-                        // Use a timed-out wait to mitigate the missed update problem
-                        Monitor.Wait(m_Sync, 50);
+                        // TODO Use a timed-out wait to mitigate the missed update problem
+                        Monitor.Wait(m_Sync);
                     }
                 }
             }
+        }
+
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
+        {
+            WaitForConstruction();
 
             // Now m_RealInvocationHandler is definitely finished, forward to it
             return m_RealInvocationHandler.GetInvocationHandlerFor(method);
+        }
+
+        public ISubInterfaceMethodInvocationHandler GetSubInterfaceHandlerFor(MethodInfo method)
+        {
+            WaitForConstruction();
+
+            return m_RealInvocationHandler.GetSubInterfaceHandlerFor(method);
         }
     }
 }

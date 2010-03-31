@@ -31,7 +31,7 @@ namespace NAct
                 return m_DynamicModule.DefineType("DynamicType" + m_TypeIndex);
             }
         }
-        
+
         /// <summary>
         /// Creates something that implements the given interface, and forwards all calls to the invocationHandler
         /// </summary>
@@ -40,12 +40,14 @@ namespace NAct
             if (!interfaceType.IsInterface)
             {
                 // Only allowing interfaces for the moment, fail fast
-                throw new InvalidOperationException("The type " + interfaceType + " is not an interface, so an actor cannot be created for it.");
+                throw new InvalidOperationException("The type " + interfaceType +
+                                                    " is not an interface, so an actor cannot be created for it.");
             }
 
             if (!interfaceType.IsPublic)
             {
-                throw new InvalidOperationException("The interface " + interfaceType + " is not public, so an actor cannot be created for it.");
+                throw new InvalidOperationException("The interface " + interfaceType +
+                                                    " is not public, so an actor cannot be created for it.");
             }
 
             TypeBuilder typeBuilder = GetFreshType();
@@ -53,42 +55,45 @@ namespace NAct
             ForEveryMethodIncludingSuperInterfaces(
                 interfaceType,
                 delegate(MethodInfo eachMethod)
+                {
+                    if (eachMethod.ReturnType != typeof(void) &&
+                        !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType))
                     {
-                        if (eachMethod.ReturnType != typeof (void) && !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType))
-                        {
-                            // The method has a return type, fail fast
-                            throw new InvalidOperationException("The interface " + interfaceType +
-                                                                " contains the method " +
-                                                                eachMethod +
-                                                                " which has a non-void return type. Actors may only have methods with void return types.");
-                        }
+                        // The method has a return type, fail fast
+                        throw new InvalidOperationException("The interface " + interfaceType +
+                                                            " contains the method " +
+                                                            eachMethod +
+                                                            " which has a non-void return type. Actors may only have methods with void return types.");
+                    }
 
-                        Type[] parameterTypes = GetParameterTypes(eachMethod);
-                        MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
-                                                                               eachMethod.Attributes & ~MethodAttributes.Abstract,
-                                                                               eachMethod.ReturnType, parameterTypes);
+                    Type[] parameterTypes = GetParameterTypes(eachMethod);
+                    MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
+                                                                           eachMethod.Attributes &
+                                                                           ~MethodAttributes.Abstract,
+                                                                           eachMethod.ReturnType, parameterTypes);
 
-                        if (eachMethod.ReturnType == typeof(void))
-                        {
-                            // This is an asynchronous call, use the appropriate IMethodInvocationHandler to move it to the right thread
-                            // Create a field in which to put the IMethodInvocationHandler
-                            FieldBuilder invocationHandlerField =
-                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                        typeof (IMethodInvocationHandler),
-                                                        FieldAttributes.Private | FieldAttributes.Static);
-                            BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
-                                                 invocationHandlerField);
-                        }
-                        else
-                        {
-                            // This is a request for a subinterface - create a method that will return a proxied version of it
-                            FieldBuilder invocationHandlerField =
-                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                        typeof(ISubInterfaceMethodInvocationHandler),
-                                                        FieldAttributes.Private | FieldAttributes.Static);
-                            BuildForwarderMethod(methodBuilder, parameterTypes, m_GetterInvokedMethod, invocationHandlerField);
-                        }
-                    });
+                    if (eachMethod.ReturnType == typeof(void))
+                    {
+                        // This is an asynchronous call, use the appropriate IMethodInvocationHandler to move it to the right thread
+                        // Create a field in which to put the IMethodInvocationHandler
+                        FieldBuilder invocationHandlerField =
+                            typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                    typeof(IMethodInvocationHandler),
+                                                    FieldAttributes.Private | FieldAttributes.Static);
+                        BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
+                                             invocationHandlerField);
+                    }
+                    else
+                    {
+                        // This is a request for a subinterface - create a method that will return a proxied version of it
+                        FieldBuilder invocationHandlerField =
+                            typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                    typeof(ISubInterfaceMethodInvocationHandler),
+                                                    FieldAttributes.Private | FieldAttributes.Static);
+                        BuildForwarderMethod(methodBuilder, parameterTypes, m_GetterInvokedMethod,
+                                             invocationHandlerField);
+                    }
+                });
 
             typeBuilder.AddInterfaceImplementation(interfaceType);
 
@@ -96,17 +101,29 @@ namespace NAct
             Type createdType = typeBuilder.CreateType();
 
             // Now we can write all the invocation handlers
-            for (Type typeBeingHarvested = interfaceType; typeBeingHarvested != null; typeBeingHarvested = typeBeingHarvested.BaseType)
-            {
-                foreach (MethodInfo eachMethod in interfaceType.GetMethods())
-                {
-                    FieldInfo writeableInvocationHandlerField =
-                        createdType.GetField(InvocationHandlerNameForMethod(eachMethod),
-                                             BindingFlags.Static |
-                                             BindingFlags.NonPublic);
-                    writeableInvocationHandlerField.SetValue(null, invocationHandler.GetInvocationHandlerFor(eachMethod));
-                }
-            }
+            ForEveryMethodIncludingSuperInterfaces(
+                interfaceType,
+                delegate(MethodInfo eachMethod)
+                    {
+                        FieldInfo writeableInvocationHandlerField =
+                            createdType.GetField(InvocationHandlerNameForMethod(eachMethod),
+                                                 BindingFlags.Static |
+                                                 BindingFlags.NonPublic);
+                        if (eachMethod.ReturnType == typeof (void))
+                        {
+                            // Standard asynchronous call, put in a handler that will swap threads
+                            writeableInvocationHandlerField.SetValue(null,
+                                                                     invocationHandler.GetInvocationHandlerFor(
+                                                                         eachMethod));
+                        }
+                        else
+                        {
+                            // Subinterface getter, put in a call that will get a wrapped subinterface
+                            writeableInvocationHandlerField.SetValue(null,
+                                                                     invocationHandler.GetSubInterfaceHandlerFor(
+                                                                         eachMethod));
+                        }
+                    });
 
             return Activator.CreateInstance(createdType);
         }
@@ -115,7 +132,10 @@ namespace NAct
         {
             foreach (Type eachSuperInterface in interfaceType.GetInterfaces())
             {
-                ForEveryMethodIncludingSuperInterfaces(eachSuperInterface, todo);
+                foreach (MethodInfo eachMethod in eachSuperInterface.GetMethods())
+                {
+                    todo(eachMethod);
+                }
             }
 
             foreach (MethodInfo eachMethod in interfaceType.GetMethods())
@@ -127,7 +147,7 @@ namespace NAct
         private static string InvocationHandlerNameForMethod(MethodInfo method)
         {
             // TODO disambiguate methods with the same name
-            return c_FieldNameForInvocationHandler + method.Name;
+            return c_FieldNameForInvocationHandler + method.DeclaringType.Name + method.Name;
         }
 
         /// <summary>
@@ -176,7 +196,7 @@ namespace NAct
                 ilGenerator.Emit(OpCodes.Ldc_I4, i);
 
                 // Push the variable itself
-                ilGenerator.Emit(OpCodes.Ldarg, (short) (methodBuilder.IsStatic ? i : i + 1));
+                ilGenerator.Emit(OpCodes.Ldarg, (short)(methodBuilder.IsStatic ? i : i + 1));
 
                 if (parameterTypes[i].IsValueType)
                 {

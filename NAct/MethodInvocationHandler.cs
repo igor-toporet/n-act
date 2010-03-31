@@ -46,6 +46,15 @@ namespace NAct
                 {
                     return targetRoot;
                 }
+
+                foreach (FieldInfo eachField in objectAsDelegate.Target.GetType().GetFields())
+                {
+                    if (typeof(IActor).IsAssignableFrom(eachField.FieldType))
+                    {
+                        // This field is an actor, give that
+                        return (IActor)eachField.GetValue(objectAsDelegate.Target);
+                    }
+                }
             }
 
             // The object isn't an actor or a delegate, but maybe it has the parent actor in a field
@@ -94,7 +103,7 @@ namespace NAct
                     Type interfaceType = null;
                     foreach (Type eachInterface in original.GetType().GetInterfaces())
                     {
-                        if (eachInterface.IsAssignableFrom(typeof(IActor)))
+                        if (typeof(IActor).IsAssignableFrom(eachInterface))
                         {
                             interfaceType = eachInterface;
                             break;
@@ -126,15 +135,45 @@ namespace NAct
                 }
             }
 
-            // Add the task to the work queue
-            ThreadPool.QueueUserWorkItem(
-                delegate
+            if (IsWinformsControl(m_Root))
+            {
+                // It's a winforms control, use reflection to call begininvoke on it
+                m_Root.GetType().GetMethod("BeginInvoke", new Type[] { typeof(Delegate)}).Invoke(
+                    m_Root,
+                    new object[]
+                        {
+                            (Action) delegate
+                                         {
+                                             m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
+                                         }
+                        });
+            }
+            else
+            {
+                // Just a standard actor - add the task to the work queue
+                ThreadPool.QueueUserWorkItem(
+                    delegate
+                        {
+                            lock (m_Root)
+                            {
+                                m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
+                            }
+                        });
+            }
+        }
+
+        private bool IsWinformsControl(object obj)
+        {
+            // Climb up through base classes to find Control
+            foreach (Type eachInterface in obj.GetType().GetInterfaces())
+            {
+                if (eachInterface.FullName == "System.ComponentModel.ISynchronizeInvoke")
                 {
-                    lock (m_Root)
-                    {
-                        m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
-                    }
-                });
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

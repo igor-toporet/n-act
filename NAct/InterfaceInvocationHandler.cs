@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace NAct
 {
@@ -21,6 +19,12 @@ namespace NAct
         {
             // TODO Wasteful - create new MethodInvocationHandlers for each invocation
             return new MethodInvocationHandler(m_RootForObject, m_Original, method, m_ProxyFactory);
+        }
+
+        public ISubInterfaceMethodInvocationHandler GetSubInterfaceHandlerFor(MethodInfo method)
+        {
+            // TODO probably also wasteful
+            return new SubinterfaceMethodInvocationHandler(m_RootForObject, m_Original, method, m_ProxyFactory);
         }
     }
 }

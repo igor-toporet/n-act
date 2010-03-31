@@ -20,7 +20,7 @@
         public static TActorType CreateActor<TActorType>(ObjectCreator<IActor> creator) where TActorType : class, IActor
         {
             CreatorInterfaceInvocationHandler creatorInvocationHandler = new CreatorInterfaceInvocationHandler(creator, s_GlobalProxyFactory);
-            return (TActorType) new ProxyFactory().CreateInterfaceProxy(creatorInvocationHandler, typeof(TActorType));
+            return (TActorType) s_GlobalProxyFactory.CreateInterfaceProxy(creatorInvocationHandler, typeof(TActorType));
         }
     }
 }

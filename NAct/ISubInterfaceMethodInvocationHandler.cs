@@ -1,7 +1,7 @@
 ﻿namespace NAct
 {
-    internal interface ISubInterfaceMethodInvocationHandler
+    public interface ISubInterfaceMethodInvocationHandler
     {
-        IActorComponent GetterInvoked();
+        IActorComponent GetterInvoked(object[] parameterValues);
     }
 }
