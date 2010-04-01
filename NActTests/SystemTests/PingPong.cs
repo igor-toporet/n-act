@@ -11,7 +11,7 @@ namespace NActTests.SystemTests
         private static int s_Count = 0;
 
         [Test]
-        public void Run()
+        public static void Main(string[] args)
         {
             IPonger ponger = ActorWrapper.WrapActor<IPonger>(() => new Ponger());
             IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
