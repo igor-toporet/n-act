@@ -44,7 +44,7 @@ namespace NAct
                                                     " is not an interface, so an NAct proxy cannot be created for it.");
             }
 
-            if (!interfaceType.IsPublic)
+            if (interfaceType.IsNotPublic)
             {
                 throw new InvalidOperationException("The interface " + interfaceType +
                                                     " is not public, so an NAct proxy cannot be created for it.");

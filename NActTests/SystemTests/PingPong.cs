@@ -8,36 +8,33 @@ namespace NActTests.SystemTests
     [TestFixture]
     public class PingPong
     {
+        private static int s_Count = 0;
+
         [Test]
         public void Run()
         {
-            IPonger ponger = ThreaderWrapper.CreateActor<IPonger>(() => new Ponger());
-            IPinger pinger = ThreaderWrapper.CreateActor<IPinger>(() => new Pinger(ponger));
+            IPonger ponger = ActorWrapper.WrapActor<IPonger>(() => new Ponger());
+            IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
 
             pinger.Ping();
-            Thread.Sleep(10000);
+            Thread.Sleep(1000);
 
-            ponger.Count(i => Console.WriteLine(i * 2));
-
-            Thread.Sleep(100);
+            Console.WriteLine(s_Count);
         }
 
         public interface IPinger : IActor
         {
-            int Ping();
+            void Ping();
         }
 
         public interface IPonger : IActor
         {
             void Pong();
 
-            event ObjectCreator<int> Ponged;
-
-            void Count(Action<int> callback);
+            event Action Ponged;
         }
 
-        // Something that prints ping and calls Pong on a Ponger every once in a while
-        private class Pinger : IPinger
+        class Pinger : IPinger
         {
             private readonly IPonger m_Ponger;
 
@@ -48,42 +45,23 @@ namespace NActTests.SystemTests
                 m_Ponger.Ponged += Ping;
             }
 
-            public int Ping()
+            public void Ping()
             {
                 m_Ponger.Pong();
-
-                return 42;
             }
         }
 
-        private class Ponger : IPonger
+        class Ponger : IPonger
         {
-            private int m_Count = 0;
-
             public void Pong()
             {
-                m_Count++;
-                InvokePonged();
+                s_Count++;
+                Ponged();
             }
 
-            public void Count(Action<int> callback)
-            {
-                callback(m_Count);
-            }
-
-            public event ObjectCreator<int> Ponged;
-
-            private void InvokePonged()
-            {
-                ObjectCreator<int> handler = Ponged;
-                if (handler != null) handler();
-            }
+            public event Action Ponged;
         }
-
-        public delegate void Action();
     }
-
-
 }
 
 

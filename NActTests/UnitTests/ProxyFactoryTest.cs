@@ -31,7 +31,7 @@ namespace NActTests.UnitTests
         [Test]
         public void TestInterface()
         {
-            IInterfaceToFake fakeObject = (IInterfaceToFake)new ProxyFactory().CreateInterfaceProxy(new MyInterfaceInvocationHandler(this), typeof(IInterfaceToFake));
+            IInterfaceToFake fakeObject = (IInterfaceToFake)new ProxyFactory().CreateInterfaceProxy(new MyInterfaceInvocationHandler(this), typeof(IInterfaceToFake), true);
 
             fakeObject.AMethod("hello", 3, true);
 
@@ -69,6 +69,11 @@ namespace NActTests.UnitTests
                 Assert.AreEqual(true, parameterValues[2]);
 
                 m_Parent.m_InvokeHappenedCalled = true;
+            }
+
+            public object ReturningInvokeHappened(object[] parameterValues)
+            {
+                throw new NotImplementedException();
             }
         }
 
