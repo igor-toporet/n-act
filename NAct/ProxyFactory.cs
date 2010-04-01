@@ -10,7 +10,7 @@ namespace NAct
         private const string c_DelegateMethodName = "ProxyMethod";
 
         private readonly MethodInfo m_InvokeHappenedMethod = typeof(IMethodInvocationHandler).GetMethod("InvokeHappened");
-        private readonly MethodInfo m_GetterInvokedMethod = typeof(ISubInterfaceMethodInvocationHandler).GetMethod("GetterInvoked");
+        private readonly MethodInfo m_ReturningInvokeHappenedMethod = typeof(IMethodInvocationHandler).GetMethod("ReturningInvokeHappened");
         private readonly AssemblyBuilder m_DynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("NActDynamicAssembly"), AssemblyBuilderAccess.RunAndSave);
         private readonly ModuleBuilder m_DynamicModule;
 
@@ -35,19 +35,19 @@ namespace NAct
         /// <summary>
         /// Creates something that implements the given interface, and forwards all calls to the invocationHandler
         /// </summary>
-        public object CreateInterfaceProxy(IInterfaceInvocationHandler invocationHandler, Type interfaceType)
+        public object CreateInterfaceProxy(IInterfaceInvocationHandler invocationHandler, Type interfaceType, bool throwOnNonActorMethod)
         {
             if (!interfaceType.IsInterface)
             {
                 // Only allowing interfaces for the moment, fail fast
                 throw new InvalidOperationException("The type " + interfaceType +
-                                                    " is not an interface, so an actor cannot be created for it.");
+                                                    " is not an interface, so an NAct proxy cannot be created for it.");
             }
 
             if (!interfaceType.IsPublic)
             {
                 throw new InvalidOperationException("The interface " + interfaceType +
-                                                    " is not public, so an actor cannot be created for it.");
+                                                    " is not public, so an NAct proxy cannot be created for it.");
             }
 
             TypeBuilder typeBuilder = GetFreshType();
@@ -56,7 +56,7 @@ namespace NAct
                 interfaceType,
                 delegate(MethodInfo eachMethod)
                 {
-                    if (eachMethod.ReturnType != typeof(void) &&
+                    if (throwOnNonActorMethod && eachMethod.ReturnType != typeof(void) &&
                         !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType))
                     {
                         // The method has a return type, fail fast
@@ -88,9 +88,9 @@ namespace NAct
                         // This is a request for a subinterface - create a method that will return a proxied version of it
                         FieldBuilder invocationHandlerField =
                             typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                    typeof(ISubInterfaceMethodInvocationHandler),
+                                                    typeof(IMethodInvocationHandler),
                                                     FieldAttributes.Private | FieldAttributes.Static);
-                        BuildForwarderMethod(methodBuilder, parameterTypes, m_GetterInvokedMethod,
+                        BuildForwarderMethod(methodBuilder, parameterTypes, m_ReturningInvokeHappenedMethod,
                                              invocationHandlerField);
                     }
                 });
@@ -120,7 +120,7 @@ namespace NAct
                         {
                             // Subinterface getter, put in a call that will get a wrapped subinterface
                             writeableInvocationHandlerField.SetValue(null,
-                                                                     invocationHandler.GetSubInterfaceHandlerFor(
+                                                                     invocationHandler.GetInvocationHandlerFor(
                                                                          eachMethod));
                         }
                     });
@@ -128,7 +128,7 @@ namespace NAct
             return Activator.CreateInstance(createdType);
         }
 
-        private void ForEveryMethodIncludingSuperInterfaces(Type interfaceType, Action<MethodInfo> todo)
+        private static void ForEveryMethodIncludingSuperInterfaces(Type interfaceType, Action<MethodInfo> todo)
         {
             foreach (Type eachSuperInterface in interfaceType.GetInterfaces())
             {

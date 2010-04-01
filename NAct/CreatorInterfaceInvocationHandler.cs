@@ -1,5 +1,4 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -84,13 +83,6 @@ namespace NAct
 
             // Now m_RealInvocationHandler is definitely finished, forward to it
             return m_RealInvocationHandler.GetInvocationHandlerFor(method);
-        }
-
-        public ISubInterfaceMethodInvocationHandler GetSubInterfaceHandlerFor(MethodInfo method)
-        {
-            WaitForConstruction();
-
-            return m_RealInvocationHandler.GetSubInterfaceHandlerFor(method);
         }
     }
 }

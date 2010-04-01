@@ -8,7 +8,5 @@ namespace NAct
         /// Gets something that can handle the invocation of the given method. TODO This call may block while waiting for the actor to be instantiated
         /// </summary>
         IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method);
-
-        ISubInterfaceMethodInvocationHandler GetSubInterfaceHandlerFor(MethodInfo method);
     }
 }

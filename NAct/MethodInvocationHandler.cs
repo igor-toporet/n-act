@@ -1,23 +1,19 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Reflection;
-using System.Threading;
 
 namespace NAct
 {
     /// <summary>
     /// Handles the invocation of a single method
     /// </summary>
-    class MethodInvocationHandler : IMethodInvocationHandler
+    abstract class MethodInvocationHandler : IMethodInvocationHandler
     {
-        private readonly IActor m_Root;
+        private readonly ProxyFactory m_ProxyFactory;
         private readonly object m_Wrapped;
         private readonly MethodInfo m_MethodBeingProxied;
-        private readonly ProxyFactory m_ProxyFactory;
 
-        public MethodInvocationHandler(IActor root, object wrapped, MethodInfo methodBeingProxied, ProxyFactory proxyFactory)
+        protected MethodInvocationHandler(ProxyFactory proxyFactory, object wrapped, MethodInfo methodBeingProxied)
         {
-            m_Root = root;
             m_ProxyFactory = proxyFactory;
             m_MethodBeingProxied = methodBeingProxied;
             m_Wrapped = wrapped;
@@ -61,20 +57,6 @@ namespace NAct
                 return RootInNestedTypeField(objectAsDelegate.Target);
             }
 
-            // The object isn't an actor or a delegate, but maybe it has the parent actor in a field
-            // (anonymous delegates do this often)
-            // Disallow for now, as we can't guarantee there's a suitable interface
-            //Type type = anObject.GetType();
-
-            //foreach (FieldInfo eachField in type.GetFields())
-            //{
-            //    if (eachField.FieldType.IsSubclassOf(typeof(IActor)))
-            //    {
-            //        // This field is an actor, give that
-            //        return (IActor)eachField.GetValue(anObject);
-            //    }
-            //}
-
             // No joy, is probably just a random (immutable I hope) variable
             return null;
         }
@@ -82,8 +64,6 @@ namespace NAct
         /// <summary>
         /// Searches the fields of anObject for one that is of it's declaring type
         /// </summary>
-        /// <param name="anObject"></param>
-        /// <returns></returns>
         private static IActor RootInNestedTypeField(object anObject)
         {
             IActor objectAsActor = anObject as IActor;
@@ -113,7 +93,7 @@ namespace NAct
         /// <summary>
         /// Checks an object for being a callback, and proxies it to move to the right thread if it is
         /// </summary>
-        /// <param name="original">The original object that's might be a callback</param>
+        /// <param name="original">The original object that might be a callback</param>
         /// <returns>The object that should now be the parameter, either just original, or a proxy for it if it was a callback</returns>
         private object ConvertParameter(object original)
         {
@@ -126,7 +106,7 @@ namespace NAct
                 if (originalAsDelegate != null)
                 {
                     // Special case for delegates: make a new delegate that calls the existing one in the right thread
-                    MethodInvocationHandler methodInvocationHandler = new MethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_ProxyFactory);
+                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_ProxyFactory);
                     return m_ProxyFactory.CreateMethodProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
@@ -150,16 +130,19 @@ namespace NAct
                         throw new ApplicationException("NAct encountered an internal inconsistency and will eat your cake.");
                     }
 
-                    return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, interfaceType);
+                    return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, interfaceType, true);
                 }
             }
 
             return original;
         }
 
-        public void InvokeHappened(object[] parameterValues)
+        /// <summary>
+        /// Checks each object for being a callback, and proxies it to move to the right thread if it is
+        /// </summary>
+        /// <param name="parameterValues">The original parameters that might be callbacks. Modified in place to give converted parameters on return.</param>
+        protected void ConvertParameters(object [] parameterValues)
         {
-            // A method has been called on the proxy
             // Detect event signups, and callback arguments
             for (int i = 0; i < parameterValues.Length; i++)
             {
@@ -169,46 +152,16 @@ namespace NAct
                     parameterValues[i] = ConvertParameter(eachParameter);
                 }
             }
-
-            if (IsWinformsControl(m_Root))
-            {
-                // It's a winforms control, use reflection to call begininvoke on it
-                m_Root.GetType().GetMethod("BeginInvoke", new Type[] { typeof(Delegate)}).Invoke(
-                    m_Root,
-                    new object[]
-                        {
-                            (Action) delegate
-                                         {
-                                             m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
-                                         }
-                        });
-            }
-            else
-            {
-                // Just a standard actor - add the task to the work queue
-                ThreadPool.QueueUserWorkItem(
-                    delegate
-                        {
-                            lock (m_Root)
-                            {
-                                m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
-                            }
-                        });
-            }
         }
 
-        private bool IsWinformsControl(object obj)
+        public virtual void InvokeHappened(object[] parameterValues)
         {
-            // Climb up through base classes to find Control
-            foreach (Type eachInterface in obj.GetType().GetInterfaces())
-            {
-                if (eachInterface.FullName == "System.ComponentModel.ISynchronizeInvoke")
-                {
-                    return true;
-                }
-            }
+            m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
+        }
 
-            return false;
+        public virtual object ReturningInvokeHappened(object[] parameterValues)
+        {
+            return m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
         }
     }
 }
