@@ -19,7 +19,7 @@ namespace NActTests.UnitTests
 
             // Make the proxy method
             MyStaticMethodDelegate proxyDelegate =
-                (MyStaticMethodDelegate) new ProxyFactory().CreateMethodProxy(new MyStaticMethodInvocationHandler(this), s_MyStaticMethodInfo, typeof(MyStaticMethodDelegate));
+                (MyStaticMethodDelegate) new ProxyFactory().CreateDelegateProxy(new MyStaticMethodInvocationHandler(this), s_MyStaticMethodInfo, typeof(MyStaticMethodDelegate));
 
             EventForMyStaticMethodToSignUpTo += proxyDelegate;
 

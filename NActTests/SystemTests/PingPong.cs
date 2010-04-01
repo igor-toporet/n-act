@@ -15,11 +15,17 @@ namespace NActTests.SystemTests
         {
             IPonger ponger = ActorWrapper.WrapActor<IPonger>(() => new Ponger());
             IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
+            //IPonger ponger = new Ponger();
+            //IPinger pinger = new Pinger(ponger);
+
+            new Thread(delegate(object o)
+                           {
+                               Thread.Sleep(1000);
+
+                               Console.WriteLine(s_Count);
+                           }).Start();
 
             pinger.Ping();
-            Thread.Sleep(1000);
-
-            Console.WriteLine(s_Count);
         }
 
         public interface IPinger : IActor
@@ -42,12 +48,15 @@ namespace NActTests.SystemTests
             {
                 m_Ponger = ponger;
 
-                m_Ponger.Ponged += Ping;
+                //m_Ponger.Ponged += Ping;
             }
 
             public void Ping()
             {
-                m_Ponger.Pong();
+                while (true)
+                {
+                    m_Ponger.Pong();
+                }
             }
         }
 
@@ -56,7 +65,7 @@ namespace NActTests.SystemTests
             public void Pong()
             {
                 s_Count++;
-                Ponged();
+                //Ponged();
             }
 
             public event Action Ponged;

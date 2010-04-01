@@ -92,7 +92,7 @@ namespace NAct
                 }
             }
 
-            InterfaceInvocationHandler invocationHandler = new InterfaceInvocationHandler(subInterfaceObject, m_Root, m_ProxyFactory);
+            ActorInterfaceInvocationHandler invocationHandler = new ActorInterfaceInvocationHandler(subInterfaceObject, m_Root, m_ProxyFactory);
 
             return m_ProxyFactory.CreateInterfaceProxy(invocationHandler, interfaceType, true);
         }

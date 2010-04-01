@@ -2,13 +2,13 @@
 
 namespace NAct
 {
-    class InterfaceInvocationHandler : IInterfaceInvocationHandler
+    class ActorInterfaceInvocationHandler : IInterfaceInvocationHandler
     {
         private readonly object m_Original;
         private readonly IActor m_RootForObject;
         private readonly ProxyFactory m_ProxyFactory;
 
-        public InterfaceInvocationHandler(object original, IActor rootForObject, ProxyFactory proxyFactory)
+        public ActorInterfaceInvocationHandler(object original, IActor rootForObject, ProxyFactory proxyFactory)
         {
             m_Original = original;
             m_ProxyFactory = proxyFactory;

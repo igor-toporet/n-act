@@ -48,7 +48,7 @@
     <Compile Include="IActorComponent.cs" />
     <Compile Include="IInterfaceInvocationHandler.cs" />
     <Compile Include="IMethodInvocationHandler.cs" />
-    <Compile Include="InterfaceInvocationHandler.cs" />
+    <Compile Include="ActorInterfaceInvocationHandler.cs" />
     <Compile Include="IterationHelper.cs" />
     <Compile Include="MethodInvocationHandler.cs" />
     <Compile Include="ObjectCreator.cs" />

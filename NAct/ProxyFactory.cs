@@ -156,7 +156,7 @@ namespace NAct
         /// <param name="methodInvocationHandler">The thing that handles the call</param>
         /// <param name="signature">A method whose signature we want to duplicate</param>
         /// <param name="delegateType">The specific type of the delegate you'd like to create (it's safe to cast the return value to this type)</param>
-        public Delegate CreateMethodProxy(IMethodInvocationHandler methodInvocationHandler, MethodInfo signature, Type delegateType)
+        public Delegate CreateDelegateProxy(IMethodInvocationHandler methodInvocationHandler, MethodInfo signature, Type delegateType)
         {
             TypeBuilder typeBuilder = GetFreshType();
 

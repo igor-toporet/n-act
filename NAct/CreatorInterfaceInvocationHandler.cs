@@ -26,7 +26,7 @@ namespace NAct
                         lock (m_Sync)
                         {
                             IActor newObject = creator();
-                            InterfaceInvocationHandler temp = new InterfaceInvocationHandler(newObject, newObject, proxyFactory);
+                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
 
                             // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
                             // assigning it to the field, so that unsynchronised access to it is safe.
@@ -50,7 +50,7 @@ namespace NAct
                         lock (rootObject)
                         {
                             IActorComponent newObject = creator();
-                            InterfaceInvocationHandler temp = new InterfaceInvocationHandler(newObject, rootObject, proxyFactory);
+                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, rootObject, proxyFactory);
 
                             // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
                             // assigning it to the field, so that unsynchronised access to it is safe.

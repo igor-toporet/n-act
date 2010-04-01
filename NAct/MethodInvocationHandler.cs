@@ -107,12 +107,12 @@ namespace NAct
                 {
                     // Special case for delegates: make a new delegate that calls the existing one in the right thread
                     ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_ProxyFactory);
-                    return m_ProxyFactory.CreateMethodProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
+                    return m_ProxyFactory.CreateDelegateProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
                 {
                     // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
-                    InterfaceInvocationHandler callbackInterceptor = new InterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
+                    ActorInterfaceInvocationHandler callbackInterceptor = new ActorInterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
 
                     // Find the object's interface which implements IActor (it might have others, but this is the important one
                     Type interfaceType = null;
