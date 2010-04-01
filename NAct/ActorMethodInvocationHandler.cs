@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -9,8 +8,8 @@ namespace NAct
         private readonly IActor m_Root;
         private readonly ProxyFactory m_ProxyFactory;
 
-        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodInfo methodBeingProxied, ProxyFactory proxyFactory)
-            : base (proxyFactory, wrapped, methodBeingProxied)
+        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
+            : base (proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
             m_ProxyFactory = proxyFactory;

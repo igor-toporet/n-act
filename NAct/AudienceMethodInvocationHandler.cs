@@ -4,8 +4,8 @@ namespace NAct
 {
     class AudienceMethodInvocationHandler : MethodInvocationHandler
     {
-        public AudienceMethodInvocationHandler(object wrapped, MethodInfo methodBeingProxied, ProxyFactory proxyFactory)
-            : base(proxyFactory, wrapped, methodBeingProxied)
+        public AudienceMethodInvocationHandler(object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
+            : base(proxyFactory, methodCaller, wrapped)
         {
         }
 

@@ -12,9 +12,9 @@ namespace NAct
             m_Original = original;
             m_ProxyFactory = proxyFactory;
         }
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
         {
-            return new AudienceMethodInvocationHandler(m_Original, method, m_ProxyFactory);
+            return new AudienceMethodInvocationHandler(m_Original, methodCaller, m_ProxyFactory);
         }
     }
 }

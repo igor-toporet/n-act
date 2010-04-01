@@ -50,6 +50,7 @@
     <Compile Include="IMethodInvocationHandler.cs" />
     <Compile Include="ActorInterfaceInvocationHandler.cs" />
     <Compile Include="IterationHelper.cs" />
+    <Compile Include="MethodCaller.cs" />
     <Compile Include="MethodInvocationHandler.cs" />
     <Compile Include="ObjectCreator.cs" />
     <Compile Include="ProxyFactory.cs" />

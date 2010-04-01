@@ -10,7 +10,12 @@ namespace NActTests.UnitTests
     {
         private bool m_InvokeHappenedCalled = false;
 
-        private static readonly MethodInfo s_MyStaticMethodInfo = typeof (ProxyFactoryTest).GetMethod("MyStaticMethod");
+        private static bool s_MyStaticMethodCalled = false;
+        private bool m_MyInstanceMethodCalled = false;
+
+        private static readonly MethodInfo s_MyStaticMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyStaticMethod");
+        private static readonly MethodInfo s_MyInstanceMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyInstanceMethod");
+        private static readonly MethodInfo s_MyReturningInstanceMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyReturningInstanceMethod");
 
         [Test]
         public void TestDelegate()
@@ -38,6 +43,36 @@ namespace NActTests.UnitTests
             Assert.IsTrue(m_InvokeHappenedCalled);
         }
 
+        [Test]
+        public void TestCallerDelegate()
+        {
+            m_MyInstanceMethodCalled = false;
+
+            object[] parameters = new object[] { "world", 5, false };
+
+            Action<object, object[]> caller = new ProxyFactory().CreateCallerDelegate(s_MyInstanceMethodInfo);
+
+            caller(this, parameters);
+
+            Assert.IsTrue(m_MyInstanceMethodCalled);
+        }
+
+        [Test]
+        public void TestReturningCallerDelegate()
+        {
+            m_MyInstanceMethodCalled = false;
+
+            object[] parameters = new object[] { "world", 5, false };
+
+            Func<object, object[], object> caller = new ProxyFactory().CreateReturningCallerDelegate(s_MyReturningInstanceMethodInfo);
+
+            object returned = caller(this, parameters);
+
+            Assert.AreEqual("boo", returned);
+
+            Assert.IsTrue(m_MyInstanceMethodCalled);
+        }
+
         class MyInterfaceInvocationHandler : IInterfaceInvocationHandler
         {
             private readonly ProxyFactoryTest m_Parent;
@@ -47,7 +82,7 @@ namespace NActTests.UnitTests
                 m_Parent = parent;
             }
 
-            public IMethodInvocationHandler GetInvocationHandlerFor(MethodInfo method)
+            public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
             {
                 return new MyStaticMethodInvocationHandler(m_Parent);
             }
@@ -85,7 +120,31 @@ namespace NActTests.UnitTests
         public delegate void MyStaticMethodDelegate(string s, int x, bool flag);
         public static void MyStaticMethod(string s, int x, bool flag)
         {
-            throw new NotImplementedException();
+            Assert.AreEqual("world", s);
+            Assert.AreEqual(5, x);
+            Assert.AreEqual(false, flag);
+
+            s_MyStaticMethodCalled = true;
+        }
+
+        public void MyInstanceMethod(string s, int x, bool flag)
+        {
+            Assert.AreEqual("world", s);
+            Assert.AreEqual(5, x);
+            Assert.AreEqual(false, flag);
+
+            m_MyInstanceMethodCalled = true;
+        }
+
+        public string MyReturningInstanceMethod(string s, int x, bool flag)
+        {
+            Assert.AreEqual("world", s);
+            Assert.AreEqual(5, x);
+            Assert.AreEqual(false, flag);
+
+            m_MyInstanceMethodCalled = true;
+
+            return "boo";
         }
 
         public event MyStaticMethodDelegate EventForMyStaticMethodToSignUpTo;

@@ -9,13 +9,13 @@ namespace NAct
     abstract class MethodInvocationHandler : IMethodInvocationHandler
     {
         private readonly ProxyFactory m_ProxyFactory;
+        private readonly MethodCaller m_MethodCaller;
         private readonly object m_Wrapped;
-        private readonly MethodInfo m_MethodBeingProxied;
 
-        protected MethodInvocationHandler(ProxyFactory proxyFactory, object wrapped, MethodInfo methodBeingProxied)
+        protected MethodInvocationHandler(ProxyFactory proxyFactory, MethodCaller methodCaller, object wrapped)
         {
             m_ProxyFactory = proxyFactory;
-            m_MethodBeingProxied = methodBeingProxied;
+            m_MethodCaller = methodCaller;
             m_Wrapped = wrapped;
         }
 
@@ -106,7 +106,8 @@ namespace NAct
                 if (originalAsDelegate != null)
                 {
                     // Special case for delegates: make a new delegate that calls the existing one in the right thread
-                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate.Target, originalAsDelegate.Method, m_ProxyFactory);
+                    MethodCaller delegateMethodCaller = m_ProxyFactory.CreateMethodCaller(originalAsDelegate.Method);
+                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate.Target, delegateMethodCaller, m_ProxyFactory);
                     return m_ProxyFactory.CreateDelegateProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
@@ -156,12 +157,12 @@ namespace NAct
 
         public virtual void InvokeHappened(object[] parameterValues)
         {
-            m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
+            m_MethodCaller.CallMethod(m_Wrapped, parameterValues);
         }
 
         public virtual object ReturningInvokeHappened(object[] parameterValues)
         {
-            return m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues);
+            return m_MethodCaller.CallReturningMethod(m_Wrapped, parameterValues);
         }
     }
 }
