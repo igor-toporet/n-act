@@ -8,6 +8,9 @@ namespace NAct
         private readonly IActor m_Root;
         private readonly ProxyFactory m_ProxyFactory;
 
+        // This will be accessed in a thread-unsafe way. I believe the worst that can happen is calculating it twice.
+        private bool? m_RootIsWinFormsControl;
+
         public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
             : base (proxyFactory, methodCaller, wrapped)
         {
@@ -20,7 +23,13 @@ namespace NAct
             // A method has been called on the proxy
             ConvertParameters(parameterValues);
 
-            if (IsWinformsControl(m_Root))
+            if (!m_RootIsWinFormsControl.HasValue)
+            {
+                // Find whether this actor is a winforms control
+                m_RootIsWinFormsControl = IsWinformsControl(m_Root);
+            }
+
+            if (m_RootIsWinFormsControl.Value)
             {
                 // It's a winforms control, use reflection to call begininvoke on it
                 m_Root.GetType().GetMethod("BeginInvoke", new[] { typeof(Delegate)}).Invoke(

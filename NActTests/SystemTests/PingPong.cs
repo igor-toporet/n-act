@@ -20,7 +20,7 @@ namespace NActTests.SystemTests
 
             new Thread(delegate(object o)
                            {
-                               Thread.Sleep(1000);
+                               Thread.Sleep(10000);
 
                                Console.WriteLine(s_Count);
                            }).Start();
