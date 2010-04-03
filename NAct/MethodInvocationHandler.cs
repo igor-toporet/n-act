@@ -107,7 +107,7 @@ namespace NAct
                 {
                     // Special case for delegates: make a new delegate that calls the existing one in the right thread
                     MethodCaller delegateMethodCaller = m_ProxyFactory.CreateDelegateCaller(originalAsDelegate.GetType(), originalAsDelegate.Method);
-                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate.Target, delegateMethodCaller, m_ProxyFactory);
+                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate, delegateMethodCaller, m_ProxyFactory);
                     return m_ProxyFactory.CreateDelegateProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
