@@ -16,21 +16,43 @@ namespace NActTests.UnitTests
         private static readonly MethodInfo s_MyStaticMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyStaticMethod");
         private static readonly MethodInfo s_MyInstanceMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyInstanceMethod");
         private static readonly MethodInfo s_MyReturningInstanceMethodInfo = typeof(ProxyFactoryTest).GetMethod("MyReturningInstanceMethod");
+        private static readonly Type s_MyDelegateType = typeof(MyDelegate);
+        private static readonly Type s_MyReturningDelegateType = typeof(MyReturningDelegate);
 
         [Test]
-        public void TestDelegate()
+        public void TestStaticDelegate()
         {
             m_InvokeHappenedCalled = false;
+            s_MyStaticMethodCalled = false;
 
             // Make the proxy method
-            MyStaticMethodDelegate proxyDelegate =
-                (MyStaticMethodDelegate) new ProxyFactory().CreateDelegateProxy(new MyStaticMethodInvocationHandler(this), s_MyStaticMethodInfo, typeof(MyStaticMethodDelegate));
+            MyDelegate proxyDelegate =
+                (MyDelegate)new ProxyFactory().CreateDelegateProxy(new MyInvocationHandler(this), s_MyStaticMethodInfo, typeof(MyDelegate));
 
-            EventForMyStaticMethodToSignUpTo += proxyDelegate;
+            EventToSignUpTo += proxyDelegate;
 
-            InvokeEventForMyStaticMethodToSignUpTo("hello", 3, true);
+            InvokeEventToSignUpTo("hello", 3, true);
 
             Assert.IsTrue(m_InvokeHappenedCalled);
+            Assert.IsFalse(s_MyStaticMethodCalled);
+        }
+
+        [Test]
+        public void TestInstanceDelegate()
+        {
+            m_InvokeHappenedCalled = false;
+            m_MyInstanceMethodCalled = false;
+
+            // Make the proxy method
+            MyDelegate proxyDelegate =
+                (MyDelegate)new ProxyFactory().CreateDelegateProxy(new MyInvocationHandler(this), s_MyInstanceMethodInfo, typeof(MyDelegate));
+
+            EventToSignUpTo += proxyDelegate;
+
+            InvokeEventToSignUpTo("hello", 3, true);
+
+            Assert.IsTrue(m_InvokeHappenedCalled);
+            Assert.IsFalse(m_MyInstanceMethodCalled);
         }
 
         [Test]
@@ -50,7 +72,7 @@ namespace NActTests.UnitTests
 
             object[] parameters = new object[] { "world", 5, false };
 
-            Action<object, object[]> caller = new ProxyFactory().CreateCallerDelegate(s_MyInstanceMethodInfo);
+            Action<object, object[]> caller = new ProxyFactory().CreateMethodCaller(s_MyInstanceMethodInfo).CallMethod;
 
             caller(this, parameters);
 
@@ -64,9 +86,39 @@ namespace NActTests.UnitTests
 
             object[] parameters = new object[] { "world", 5, false };
 
-            Func<object, object[], object> caller = new ProxyFactory().CreateReturningCallerDelegate(s_MyReturningInstanceMethodInfo);
+            Func<object, object[], object> caller = new ProxyFactory().CreateMethodCaller(s_MyReturningInstanceMethodInfo).CallReturningMethod;
 
             object returned = caller(this, parameters);
+
+            Assert.AreEqual("boo", returned);
+
+            Assert.IsTrue(m_MyInstanceMethodCalled);
+        }
+
+        [Test]
+        public void TestDelegateCallerDelegate()
+        {
+            m_MyInstanceMethodCalled = false;
+
+            object[] parameters = new object[] { "world", 5, false };
+
+            Action<object, object[]> caller = new ProxyFactory().CreateDelegateCaller(s_MyDelegateType, s_MyInstanceMethodInfo).CallMethod;
+
+            caller(new MyDelegate(MyInstanceMethod), parameters);
+
+            Assert.IsTrue(m_MyInstanceMethodCalled);
+        }
+
+        [Test]
+        public void TestReturningDelegateCallerDelegate()
+        {
+            m_MyInstanceMethodCalled = false;
+
+            object[] parameters = new object[] { "world", 5, false };
+
+            Func<object, object[], object> caller = new ProxyFactory().CreateDelegateCaller(s_MyReturningDelegateType, s_MyReturningInstanceMethodInfo).CallReturningMethod;
+
+            object returned = caller(new MyReturningDelegate(MyReturningInstanceMethod), parameters);
 
             Assert.AreEqual("boo", returned);
 
@@ -84,15 +136,15 @@ namespace NActTests.UnitTests
 
             public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
             {
-                return new MyStaticMethodInvocationHandler(m_Parent);
+                return new MyInvocationHandler(m_Parent);
             }
         }
 
-        private class MyStaticMethodInvocationHandler : IMethodInvocationHandler
+        private class MyInvocationHandler : IMethodInvocationHandler
         {
             private readonly ProxyFactoryTest m_Parent;
 
-            public MyStaticMethodInvocationHandler(ProxyFactoryTest parent)
+            public MyInvocationHandler(ProxyFactoryTest parent)
             {
                 m_Parent = parent;
             }
@@ -117,7 +169,7 @@ namespace NActTests.UnitTests
             void AMethod(string name, int num, bool flag);
         }
 
-        public delegate void MyStaticMethodDelegate(string s, int x, bool flag);
+        public delegate void MyDelegate(string s, int x, bool flag);
         public static void MyStaticMethod(string s, int x, bool flag)
         {
             Assert.AreEqual("world", s);
@@ -136,6 +188,7 @@ namespace NActTests.UnitTests
             m_MyInstanceMethodCalled = true;
         }
 
+        public delegate string MyReturningDelegate(string s, int x, bool flag);
         public string MyReturningInstanceMethod(string s, int x, bool flag)
         {
             Assert.AreEqual("world", s);
@@ -147,11 +200,11 @@ namespace NActTests.UnitTests
             return "boo";
         }
 
-        public event MyStaticMethodDelegate EventForMyStaticMethodToSignUpTo;
+        public event MyDelegate EventToSignUpTo;
 
-        public void InvokeEventForMyStaticMethodToSignUpTo(string s, int x, bool flag)
+        public void InvokeEventToSignUpTo(string s, int x, bool flag)
         {
-            MyStaticMethodDelegate handler = EventForMyStaticMethodToSignUpTo;
+            MyDelegate handler = EventToSignUpTo;
             if (handler != null) handler(s, x, flag);
         }
     }

@@ -131,13 +131,6 @@ namespace NAct
             return Activator.CreateInstance(createdType);
         }
 
-        internal MethodCaller CreateMethodCaller(MethodInfo eachMethod)
-        {
-            Action<object, object[]> voidMethodCaller = CreateCallerDelegate(eachMethod);
-            Func<object, object[], object> returningMethodCaller = CreateReturningCallerDelegate(eachMethod);
-            return new MethodCaller(voidMethodCaller, returningMethodCaller);
-        }
-
         private static void ForEveryMethodIncludingSuperInterfaces(Type interfaceType, Action<MethodInfo> todo)
         {
             foreach (Type eachSuperInterface in interfaceType.GetInterfaces())
@@ -186,16 +179,74 @@ namespace NAct
         }
 
         /// <summary>
-        /// Creates a function that takes a target and a parameters array, and will call the given method, having unpacked its arguments from the array.
+        /// Creates something that, when given a delegate (compatible with the signature given here) and some parameters, will run it.
         /// </summary>
-        public Action<object, object[]> CreateCallerDelegate(MethodInfo methodToCall)
+        public MethodCaller CreateDelegateCaller(Type delegateType, MethodInfo delegateSignature)
         {
-            return (Action<object, object[]>) CreateCallerDelegate(methodToCall, typeof (Action<object, object[]>), typeof(void));
+            Action<object, object[]> caller = (Action<object, object[]>) CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
+            Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Func<object, object[], object>), typeof(object));
+
+            return new MethodCaller(caller, returningCaller);
         }
 
-        public Func<object, object[], object> CreateReturningCallerDelegate(MethodInfo methodToCall)
+        private Delegate CreateDelegateCallerDelegate(Type targetDelegateType, MethodInfo targetDelegateSignature, Type shimDelegateType, Type returnType)
         {
-            return (Func<object, object[], object>)CreateCallerDelegate(methodToCall, typeof(Func<object, object[], object>), typeof(object));
+            TypeBuilder typeBuilder = GetFreshType();
+            MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public | MethodAttributes.Static, returnType, new Type[] { typeof(object), typeof(object[]) });
+            ILGenerator ilGenerator = methodBuilder.GetILGenerator();
+
+            // Load the target delegate
+            ilGenerator.Emit(OpCodes.Ldarg, (short)0);
+            ilGenerator.Emit(OpCodes.Castclass, targetDelegateType);
+
+            // Suck each parameter out of the array
+            ParameterInfo[] parameterInfos = targetDelegateSignature.GetParameters();
+            for (int i = 0; i < parameterInfos.Length; i++)
+            {
+                // Load the array
+                ilGenerator.Emit(OpCodes.Ldarg, (short)1);
+
+                // Push the array index
+                ilGenerator.Emit(OpCodes.Ldc_I4, i);
+
+                // Get the parameter value from the array
+                ilGenerator.Emit(OpCodes.Ldelem_Ref);
+
+                Type parameterType = parameterInfos[i].ParameterType;
+                if (parameterType.IsValueType)
+                {
+                    // The parameter is a value type - unbox it
+                    ilGenerator.Emit(OpCodes.Unbox_Any, parameterType);
+                }
+                else
+                {
+                    // The parameter is a reference type, cast the object to it
+                    ilGenerator.Emit(OpCodes.Castclass, parameterType);
+                }
+            }
+
+            // Make the call
+            MethodInfo delegateInvoke = targetDelegateType.GetMethod("Invoke");
+            ilGenerator.Emit(OpCodes.Callvirt, delegateInvoke);
+
+            // And the ret
+            ilGenerator.Emit(OpCodes.Ret);
+
+            // Finalise the type
+            Type createdType = typeBuilder.CreateType();
+
+            return Delegate.CreateDelegate(shimDelegateType, createdType.GetMethod(c_DelegateMethodName));
+        }
+
+        /// <summary>
+        /// Creates something that takes a target and a parameters array, and will call the given method, having unpacked its arguments from the array.
+        /// </summary>
+        public MethodCaller CreateMethodCaller(MethodInfo methodToCall)
+        {
+            Action<object, object[]> caller = (Action<object, object[]>)CreateCallerDelegate(methodToCall, typeof(Action<object, object[]>), typeof(void));
+            Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateCallerDelegate(methodToCall, typeof(Func<object, object[], object>), typeof(object));
+
+            return new MethodCaller(caller, returningCaller);
         }
 
         private Delegate CreateCallerDelegate(MethodInfo methodToCall, Type delegateType, Type returnType)

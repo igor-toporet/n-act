@@ -14,11 +14,21 @@
             m_ReturningMethodCaller = returningMethodCaller;
         }
 
+        /// <summary>
+        /// Takes a target object, and some parameters and runs the method represented by this MethodCaller on it.
+        /// 
+        /// The target object may be a real object, or it may be a delegate, depending on which kind of method caller this is.
+        /// </summary>
         public void CallMethod(object target, object[] parameters)
         {
             m_MethodCaller(target, parameters);
         }
 
+        /// <summary>
+        /// Takes a target object, and some parameters and runs the method represented by this MethodCaller on it.
+        /// 
+        /// The target object may be a real object, or it may be a delegate, depending on which kind of method caller this is.
+        /// </summary>
         public object CallReturningMethod(object target, object[] parameters)
         {
             return m_ReturningMethodCaller(target, parameters);
