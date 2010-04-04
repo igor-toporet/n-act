@@ -23,6 +23,7 @@ namespace NActTests.SystemTests
                                Thread.Sleep(10000);
 
                                Console.WriteLine(s_Count);
+                               Thread.Sleep(1000);
                            }).Start();
 
             pinger.Ping();
@@ -35,7 +36,7 @@ namespace NActTests.SystemTests
 
         public interface IPonger : IActor
         {
-            void Pong();
+            void Pong(Action callback);
 
             event Action Ponged;
         }
@@ -53,18 +54,16 @@ namespace NActTests.SystemTests
 
             public void Ping()
             {
-                while (true)
-                {
-                    m_Ponger.Pong();
-                }
+                m_Ponger.Pong(Ping);
             }
         }
 
         class Ponger : IPonger
         {
-            public void Pong()
+            public void Pong(Action callback)
             {
                 s_Count++;
+                callback();
                 //Ponged();
             }
 
