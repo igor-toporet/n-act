@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using NAct;
+using NAct.Utils;
 using NUnit.Framework;
 
 namespace NActTests.UnitTests

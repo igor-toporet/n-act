@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using NAct;
+using NAct.Utils;
 using NUnit.Framework;
 
 namespace NActTests.SystemTests

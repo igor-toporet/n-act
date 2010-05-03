@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace NAct
+namespace NAct.Utils
 {
     public static class IterationHelper
     {

@@ -1,4 +1,6 @@
-﻿namespace NAct
+﻿using NAct.Utils;
+
+namespace NAct
 {
     /// <summary>
     /// Stores two delegates (only one of which is ever valid to call) for calling later.
