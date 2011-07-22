@@ -67,6 +67,17 @@ namespace NActTests.UnitTests
         }
 
         [Test]
+        public void TestSubInterface()
+        {
+            IInterfaceWithSubinterface fakeObject = (IInterfaceWithSubinterface)new ProxyFactory().CreateInterfaceProxy(new MyInterfaceInvocationHandler(this), typeof(IInterfaceWithSubinterface), true);
+
+
+            fakeObject.TheSubInterface.AMethod("hello", 3, true);
+
+            Assert.IsTrue(m_InvokeHappenedCalled);
+        }
+
+        [Test]
         public void TestCallerDelegate()
         {
             m_MyInstanceMethodCalled = false;
@@ -161,13 +172,19 @@ namespace NActTests.UnitTests
 
             public object ReturningInvokeHappened(object[] parameterValues)
             {
-                throw new NotImplementedException();
+                // Bit of a hack, making a proxy for IInterfaceToFake
+                return new ProxyFactory().CreateInterfaceProxy(new MyInterfaceInvocationHandler(m_Parent), typeof(IInterfaceToFake), true);
             }
         }
 
-        public interface IInterfaceToFake
+        public interface IInterfaceToFake : IActorComponent
         {
             void AMethod(string name, int num, bool flag);
+        }
+
+        public interface IInterfaceWithSubinterface
+        {
+            IInterfaceToFake TheSubInterface { get; } 
         }
 
         public delegate void MyDelegate(string s, int x, bool flag);
