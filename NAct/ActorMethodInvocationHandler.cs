@@ -13,7 +13,7 @@ namespace NAct
         private bool? m_RootIsWinFormsControl;
 
         public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
-            : base (proxyFactory, methodCaller, wrapped)
+            : base(proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
             m_ProxyFactory = proxyFactory;
@@ -33,14 +33,21 @@ namespace NAct
             if (m_RootIsWinFormsControl.Value)
             {
                 // It's a winforms control, use reflection to call begininvoke on it
-                m_Root.GetType().GetMethod("BeginInvoke", new[] { typeof(Delegate)}).Invoke(
+                m_Root.GetType().GetMethod("BeginInvoke", new[] { typeof(Delegate) }).Invoke(
                     m_Root,
                     new object[]
                         {
-                            (Action) delegate
-                                         {
-                                             BaseInvokeHappened(parameterValues);
-                                         }
+                                (Action) delegate
+                                             {
+                                                 try
+                                                 {
+                                                     BaseInvokeHappened(parameterValues);
+                                                 }
+                                                 catch (Exception e)
+                                                 {
+                                                     ExceptionHandling.ExceptionHandler(e);
+                                                 }
+                                             }
                         });
             }
             else
@@ -48,12 +55,19 @@ namespace NAct
                 // Just a standard actor - add the task to the work queue
                 ThreadPool.QueueUserWorkItem(
                     delegate
+                    {
+                        try
                         {
                             lock (m_Root)
                             {
                                 BaseInvokeHappened(parameterValues);
                             }
-                        });
+                        }
+                        catch (Exception e)
+                        {
+                            ExceptionHandling.ExceptionHandler(e);
+                        }
+                    });
             }
         }
 

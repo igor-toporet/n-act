@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -11,7 +12,7 @@ namespace NAct
         /// Something to lock on while co-ordinating construction
         /// </summary>
         private readonly object m_Sync;
-        
+
         /// <summary>
         /// Creates an interceptor for an object that doesn't exist yet.
         /// 
@@ -22,6 +23,8 @@ namespace NAct
             m_Sync = new object();
             ThreadPool.QueueUserWorkItem(
                 delegate
+                {
+                    try
                     {
                         lock (m_Sync)
                         {
@@ -34,7 +37,12 @@ namespace NAct
                             m_RealInvocationHandler = temp;
                             Monitor.PulseAll(m_Sync);
                         }
-                    });
+                    }
+                    catch (Exception e)
+                    {
+                        ExceptionHandling.ExceptionHandler(e);
+                    }
+                });
         }
 
         /// <summary>
@@ -46,6 +54,8 @@ namespace NAct
             m_Sync = rootObject;
             ThreadPool.QueueUserWorkItem(
                 delegate
+                {
+                    try
                     {
                         lock (rootObject)
                         {
@@ -58,7 +68,12 @@ namespace NAct
                             m_RealInvocationHandler = temp;
                             Monitor.PulseAll(m_Sync);
                         }
-                    });
+                    }
+                    catch (Exception e)
+                    {
+                        ExceptionHandling.ExceptionHandler(e);
+                    }
+                });
         }
 
         private void WaitForConstruction()

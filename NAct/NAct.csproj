@@ -46,6 +46,7 @@
     <Compile Include="ActorMethodInvocationHandler.cs" />
     <Compile Include="AudienceInterfaceInvocationHandler.cs" />
     <Compile Include="AudienceMethodInvocationHandler.cs" />
+    <Compile Include="ExceptionHandling.cs" />
     <Compile Include="Utils\DictionaryActor.cs" />
     <Compile Include="Utils\FunctionalTypes.cs" />
     <Compile Include="CreatorInterfaceInvocationHandler.cs" />
@@ -63,6 +64,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ActorWrapper.cs" />
     <Compile Include="Utils\ITimer.cs" />
+    <Compile Include="Utils\SmartAssemblyAttributes.cs" />
     <Compile Include="Utils\Timer.cs" />
     <Compile Include="Utils\WaitHelper.cs" />
   </ItemGroup>
