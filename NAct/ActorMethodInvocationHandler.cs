@@ -10,7 +10,8 @@ namespace NAct
         private readonly ProxyFactory m_ProxyFactory;
 
         // This will be accessed in a thread-unsafe way. I believe the worst that can happen is calculating it twice.
-        private bool? m_RootIsWinFormsControl;
+        private bool? m_RootIsControl;
+        private bool? m_RootIsWPFControl;
 
         public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
             : base(proxyFactory, methodCaller, wrapped)
@@ -24,17 +25,36 @@ namespace NAct
             // A method has been called on the proxy
             ConvertParameters(parameterValues);
 
-            if (!m_RootIsWinFormsControl.HasValue)
+            if (!m_RootIsWPFControl.HasValue)
             {
-                // Find whether this actor is a winforms control
-                m_RootIsWinFormsControl = IsWinformsControl(m_Root);
+                // Find whether this actor is a wpf control
+                m_RootIsWPFControl = IsWPFControl(m_Root);
+                if (m_RootIsWPFControl.Value) m_RootIsControl = true;
             }
 
-            if (m_RootIsWinFormsControl.Value)
+            if (!m_RootIsControl.HasValue)
             {
-                // It's a winforms control, use reflection to call begininvoke on it
-                m_Root.GetType().GetMethod("BeginInvoke", new[] { typeof(Delegate) }).Invoke(
-                    m_Root,
+                // Find whether this actor is a winforms control
+                m_RootIsControl = IsWinformsControl(m_Root);
+            }
+
+            if (m_RootIsControl.Value)
+            {
+                // It's a control, use reflection to call begininvoke on it
+                object dispatcher;
+                if (m_RootIsWPFControl.Value)
+                {
+                    // It's a wpf control, use reflection to get its dispatcher to call begininvoke on that
+                    dispatcher = m_Root.GetType().GetProperty("Dispatcher").GetGetMethod().Invoke(m_Root, new object[0]);
+                }
+                else
+                {
+                    // Winforms controls are their own dispatcher
+                    dispatcher = m_Root;
+                }
+
+                dispatcher.GetType().GetMethod("BeginInvoke", new[] { typeof(Delegate), typeof(object[]) }).Invoke(
+                    dispatcher,
                     new object[]
                         {
                                 (Action) delegate
@@ -47,7 +67,8 @@ namespace NAct
                                                  {
                                                      ExceptionHandling.ExceptionHandler(e);
                                                  }
-                                             }
+                                             },
+                                             new object[0]
                         });
             }
             else
@@ -89,6 +110,23 @@ namespace NAct
                 {
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        private static bool IsWPFControl(object obj)
+        {
+            // Climb up through base classes to find DispatcherObject
+            Type eachBaseClass = obj.GetType();
+            while (eachBaseClass != null)
+            {
+                if (eachBaseClass.FullName == "System.Windows.Threading.DispatcherObject")
+                {
+                    return true;
+                }
+
+                eachBaseClass = eachBaseClass.BaseType;
             }
 
             return false;
