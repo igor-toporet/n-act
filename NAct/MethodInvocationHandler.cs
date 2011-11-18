@@ -121,11 +121,11 @@ namespace NAct
                     // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
                     ActorInterfaceInvocationHandler callbackInterceptor = new ActorInterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
 
-                    // Find the object's interface which implements IActor (it might have others, but this is the important one
+                    // Find the object's interface which implements IActor (it might have others, but this is the important one)
                     Type interfaceType = null;
                     foreach (Type eachInterface in original.GetType().GetInterfaces())
                     {
-                        if (typeof(IActor).IsAssignableFrom(eachInterface))
+                        if (typeof(IActor).IsAssignableFrom(eachInterface) && !eachInterface.Equals(typeof(IActor)))
                         {
                             interfaceType = eachInterface;
                             break;
