@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace NAct
+namespace NAct.Utils
 {
     public static class WaitHelper
     {
@@ -12,25 +12,19 @@ namespace NAct
         /// </summary>
         public static T InvokeAndWait<T>(Action<Action<T>> toDo)
         {
-            object waiter = new object();
+            ManualResetEvent mre = new ManualResetEvent(false);
             T toReturn = default(T);
 
-            lock (waiter)
-            {
-                toDo(
-                    delegate(T result)
-                        {
-                            lock (waiter)
-                            {
-                                toReturn = result;
-                                Monitor.Pulse(waiter);
-                            }
-                        });
+            toDo(
+                result =>
+                    {
+                        toReturn = result;
+                        mre.Set();
+                    });
 
-                Monitor.Wait(waiter);
+            mre.WaitOne();
 
-                return toReturn;
-            }
+            return toReturn;
         }
     }
 }
