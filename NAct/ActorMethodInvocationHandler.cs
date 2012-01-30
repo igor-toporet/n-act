@@ -57,18 +57,8 @@ namespace NAct
                     dispatcher,
                     new object[]
                         {
-                                (Action) delegate
-                                             {
-                                                 try
-                                                 {
-                                                     BaseInvokeHappened(parameterValues);
-                                                 }
-                                                 catch (Exception e)
-                                                 {
-                                                     ExceptionHandling.ExceptionHandler(e);
-                                                 }
-                                             },
-                                             new object[0]
+                            (Action) (() => Hooking.Hook(() => BaseInvokeHappened(parameterValues))),
+                            new object[0]
                         });
             }
             else
@@ -77,17 +67,13 @@ namespace NAct
                 ThreadPool.QueueUserWorkItem(
                     delegate
                     {
-                        try
-                        {
-                            lock (m_Root)
-                            {
-                                BaseInvokeHappened(parameterValues);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            ExceptionHandling.ExceptionHandler(e);
-                        }
+                        Hooking.Hook(() =>
+                                         {
+                                             lock (m_Root)
+                                             {
+                                                 BaseInvokeHappened(parameterValues);
+                                             }
+                                         });
                     });
             }
         }

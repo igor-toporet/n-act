@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\Build\Debug\</OutputPath>
+    <OutputPath>..\Build\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -26,7 +26,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\Build\Release\</OutputPath>
+    <OutputPath>..\Build\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -46,7 +46,7 @@
     <Compile Include="ActorMethodInvocationHandler.cs" />
     <Compile Include="AudienceInterfaceInvocationHandler.cs" />
     <Compile Include="AudienceMethodInvocationHandler.cs" />
-    <Compile Include="ExceptionHandling.cs" />
+    <Compile Include="Hooking.cs" />
     <Compile Include="Utils\DictionaryActor.cs" />
     <Compile Include="Utils\FunctionalTypes.cs" />
     <Compile Include="CreatorInterfaceInvocationHandler.cs" />

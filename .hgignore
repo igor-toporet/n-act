@@ -4,3 +4,6 @@ relre:bin
 relre:obj
 relre:ReSharper
 relre:svn
+syntax: glob
+Build/Release/NAct.dll
+Build/Release/NAct.pdb

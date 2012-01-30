@@ -24,24 +24,21 @@ namespace NAct
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
-                    try
-                    {
-                        lock (m_Sync)
+                    Hooking.Hook(
+                        () =>
                         {
-                            IActor newObject = creator();
-                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
+                            lock (m_Sync)
+                            {
+                                IActor newObject = creator();
+                                ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
 
-                            // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
-                            // assigning it to the field, so that unsynchronised access to it is safe.
-                            Thread.MemoryBarrier();
-                            m_RealInvocationHandler = temp;
-                            Monitor.PulseAll(m_Sync);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        ExceptionHandling.ExceptionHandler(e);
-                    }
+                                // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
+                                // assigning it to the field, so that unsynchronised access to it is safe.
+                                Thread.MemoryBarrier();
+                                m_RealInvocationHandler = temp;
+                                Monitor.PulseAll(m_Sync);
+                            }
+                        });
                 });
         }
 
@@ -55,7 +52,7 @@ namespace NAct
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
-                    try
+                    Hooking.Hook(() =>
                     {
                         lock (rootObject)
                         {
@@ -68,11 +65,7 @@ namespace NAct
                             m_RealInvocationHandler = temp;
                             Monitor.PulseAll(m_Sync);
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        ExceptionHandling.ExceptionHandler(e);
-                    }
+                    });
                 });
         }
 
