@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using NAct.Utils;
 
@@ -6,6 +7,8 @@ namespace NAct
 {
     class ActorMethodInvocationHandler : MethodInvocationHandler
     {
+        private static readonly Dictionary<IActor, Queue<Action>> s_JobQueues = new Dictionary<IActor, Queue<Action>>(); 
+
         private readonly IActor m_Root;
         private readonly ProxyFactory m_ProxyFactory;
 
@@ -40,6 +43,21 @@ namespace NAct
 
             Hooking.BeforeQueueActorCall();
 
+            Queue<Action> queueForThisObject;
+            lock(s_JobQueues)
+            {
+                if ( ! s_JobQueues.TryGetValue(m_Root, out queueForThisObject) )
+                {
+                    queueForThisObject = new Queue<Action>();
+                    s_JobQueues[m_Root] = queueForThisObject;
+                }
+            }
+
+            lock(queueForThisObject)
+            {
+                queueForThisObject.Enqueue(() => BaseInvokeHappened(parameterValues));
+            }
+
             if (m_RootIsControl.Value)
             {
                 // It's a control, use reflection to call begininvoke on it
@@ -59,7 +77,7 @@ namespace NAct
                     dispatcher,
                     new object[]
                         {
-                            (Action) (() => Hooking.ActorCallWrapper(() => BaseInvokeHappened(parameterValues))),
+                            (Action) (() => Hooking.ActorCallWrapper(() => RunNextQueueItem(m_Root, queueForThisObject))),
                             new object[0]
                         });
             }
@@ -73,17 +91,46 @@ namespace NAct
                                          {
                                              lock (m_Root)
                                              {
-                                                 BaseInvokeHappened(parameterValues);
+                                                 RunNextQueueItem(m_Root, queueForThisObject);
                                              }
                                          });
                     });
             }
         }
 
+        private void RunNextQueueItem(IActor actor, Queue<Action> queueForThisObject)
+        {
+            Action action;
+            lock(queueForThisObject)
+            {
+                if(queueForThisObject.Count > 0)
+                {
+                    action = queueForThisObject.Dequeue();
+                }
+                else
+                {
+                    action = null;
+                }
+                if(queueForThisObject.Count == 0)
+                {
+                    lock(s_JobQueues)
+                    {
+                        // Remove from the dictionary so we do not stop the actor being garbage collected
+                        s_JobQueues.Remove(actor);
+                    }
+                }
+            }
+            if (action != null)
+            {
+                action();
+            }
+        }
+
         /// <summary>
         ///  I do this in a helper method to keep the code verifiable.
         /// http://stackoverflow.com/questions/405379/what-is-unverifiable-code-and-why-is-it-bad
-        /// </summary>
+        /// </summary
+        /// >
         private void BaseInvokeHappened(object[] parameterValues)
         {
             base.InvokeHappened(parameterValues);
