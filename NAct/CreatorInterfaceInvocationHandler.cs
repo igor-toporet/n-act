@@ -24,7 +24,7 @@ namespace NAct
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
-                    Hooking.Hook(
+                    Hooking.ActorCallWrapper(
                         () =>
                         {
                             lock (m_Sync)
@@ -52,7 +52,7 @@ namespace NAct
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
-                    Hooking.Hook(() =>
+                    Hooking.ActorCallWrapper(() =>
                     {
                         lock (rootObject)
                         {

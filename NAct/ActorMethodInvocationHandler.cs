@@ -38,6 +38,8 @@ namespace NAct
                 m_RootIsControl = IsWinformsControl(m_Root);
             }
 
+            Hooking.BeforeQueueActorCall();
+
             if (m_RootIsControl.Value)
             {
                 // It's a control, use reflection to call begininvoke on it
@@ -57,7 +59,7 @@ namespace NAct
                     dispatcher,
                     new object[]
                         {
-                            (Action) (() => Hooking.Hook(() => BaseInvokeHappened(parameterValues))),
+                            (Action) (() => Hooking.ActorCallWrapper(() => BaseInvokeHappened(parameterValues))),
                             new object[0]
                         });
             }
@@ -67,7 +69,7 @@ namespace NAct
                 ThreadPool.QueueUserWorkItem(
                     delegate
                     {
-                        Hooking.Hook(() =>
+                        Hooking.ActorCallWrapper(() =>
                                          {
                                              lock (m_Root)
                                              {

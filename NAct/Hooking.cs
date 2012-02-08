@@ -5,14 +5,17 @@ namespace NAct
 {
     public class Hooking
     {
-        internal static Action<Action> Hook { get; set; }
+        public static Action<Action> ActorCallWrapper { internal get; set; }
+        public static Action BeforeQueueActorCall { internal get; set; }
+
 
         static Hooking()
         {
-            SetHook(DefaultHook);
+            ActorCallWrapper = DefaultActorCallWrapper;
+            BeforeQueueActorCall = DoNothing;
         }
 
-        private static void DefaultHook(Action action)
+        private static void DefaultActorCallWrapper(Action action)
         {
             // By default, just call the stuff in a try-catch
             try
@@ -24,9 +27,9 @@ namespace NAct
             }
         }
 
-        public static void SetHook(Action<Action> hook)
+        private static void DoNothing()
         {
-            Hook = hook;
+            
         }
     }
 }
