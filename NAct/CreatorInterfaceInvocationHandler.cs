@@ -20,6 +20,8 @@ namespace NAct
         /// </summary>
         public CreatorInterfaceInvocationHandler(ObjectCreator<IActor> creator, ProxyFactory proxyFactory)
         {
+            Hooking.BeforeQueueActorCall();
+
             m_Sync = new object();
             ThreadPool.QueueUserWorkItem(
                 delegate
@@ -47,6 +49,8 @@ namespace NAct
         /// </summary>
         internal CreatorInterfaceInvocationHandler(ObjectCreator<IActorComponent> creator, IActor rootObject, ProxyFactory proxyFactory)
         {
+            Hooking.BeforeQueueActorCall();
+
             // We need to lock on the root when using an existing actor
             m_Sync = rootObject;
             ThreadPool.QueueUserWorkItem(
