@@ -1,4 +1,6 @@
-﻿namespace NAct.Utils
+﻿using System;
+
+namespace NAct.Utils
 {
     interface ITimer : IActor
     {
