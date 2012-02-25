@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading.Tasks;
 using NAct.Utils;
 
 namespace NAct
@@ -70,45 +71,47 @@ namespace NAct
                 ForEveryMethodIncludingSuperInterfaces(
                     interfaceType,
                     delegate(MethodInfo eachMethod)
+                    {
+                        if (throwOnNonActorMethod && eachMethod.ReturnType != typeof(void) &&
+                            !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType) &&
+                            typeof(Task) != eachMethod.ReturnType &&
+                            typeof(Task<>) != eachMethod.ReturnType)
                         {
-                            if (throwOnNonActorMethod && eachMethod.ReturnType != typeof (void) &&
-                                !typeof (IActorComponent).IsAssignableFrom(eachMethod.ReturnType))
-                            {
-                                // The method has a return type, fail fast
-                                throw new InvalidOperationException("The interface " + interfaceType +
-                                                                    " contains the method " +
-                                                                    eachMethod +
-                                                                    " which has a non-void return type. Actors may only have methods with void return types.");
-                            }
+                            // The method has a return type which isn't a sub-actor or Task, fail fast
+                            throw new InvalidOperationException("The interface " + interfaceType +
+                                                                " contains the method " +
+                                                                eachMethod +
+                                                                " which has a non-void return type. Actors may only have methods with void return types.");
+                        }
 
-                            Type[] parameterTypes = GetParameterTypes(eachMethod);
-                            MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
-                                                                                   eachMethod.Attributes &
-                                                                                   ~MethodAttributes.Abstract,
-                                                                                   eachMethod.ReturnType, parameterTypes);
+                        Type[] parameterTypes = GetParameterTypes(eachMethod);
+                        MethodBuilder methodBuilder = typeBuilder.DefineMethod(eachMethod.Name,
+                                                                               eachMethod.Attributes &
+                                                                               ~MethodAttributes.Abstract,
+                                                                               eachMethod.ReturnType, parameterTypes);
 
-                            if (eachMethod.ReturnType == typeof (void))
-                            {
-                                // This is an asynchronous call, use the appropriate IMethodInvocationHandler to move it to the right thread
-                                // Create a field in which to put the IMethodInvocationHandler
-                                FieldBuilder invocationHandlerField =
-                                    typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                            typeof (IMethodInvocationHandler),
-                                                            FieldAttributes.Private);
-                                BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
-                                                     invocationHandlerField);
-                            }
-                            else
-                            {
-                                // This is a request for a subinterface - create a method that will return a proxied version of it
-                                FieldBuilder invocationHandlerField =
-                                    typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
-                                                            typeof (IMethodInvocationHandler),
-                                                            FieldAttributes.Private);
-                                BuildForwarderMethod(methodBuilder, parameterTypes, m_ReturningInvokeHappenedMethod,
-                                                     invocationHandlerField);
-                            }
-                        });
+                        if (eachMethod.ReturnType == typeof(void))
+                        {
+                            // This is an asynchronous call, use the appropriate IMethodInvocationHandler to move it to the right thread
+                            // Create a field in which to put the IMethodInvocationHandler
+                            FieldBuilder invocationHandlerField =
+                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                        typeof(IMethodInvocationHandler),
+                                                        FieldAttributes.Private);
+                            BuildForwarderMethod(methodBuilder, parameterTypes, m_InvokeHappenedMethod,
+                                                 invocationHandlerField);
+                        }
+                        else
+                        {
+                            // This is a request for a subinterface - create a method that will return a proxied version of it
+                            FieldBuilder invocationHandlerField =
+                                typeBuilder.DefineField(InvocationHandlerNameForMethod(eachMethod),
+                                                        typeof(IMethodInvocationHandler),
+                                                        FieldAttributes.Private);
+                            BuildForwarderMethod(methodBuilder, parameterTypes, m_ReturningInvokeHappenedMethod,
+                                                 invocationHandlerField);
+                        }
+                    });
 
                 typeBuilder.AddInterfaceImplementation(interfaceType);
 
@@ -128,27 +131,16 @@ namespace NAct
             ForEveryMethodIncludingSuperInterfaces(
                 interfaceType,
                 delegate(MethodInfo eachMethod)
-                    {
-                        FieldInfo writeableInvocationHandlerField =
-                            proxyType.GetField(InvocationHandlerNameForMethod(eachMethod), BindingFlags.NonPublic | BindingFlags.Instance);
+                {
+                    FieldInfo writeableInvocationHandlerField =
+                        proxyType.GetField(InvocationHandlerNameForMethod(eachMethod), BindingFlags.NonPublic | BindingFlags.Instance);
 
-                        MethodCaller methodCaller = CreateMethodCaller(eachMethod);
+                    MethodCaller methodCaller = CreateMethodCaller(eachMethod);
 
-                        if (eachMethod.ReturnType == typeof (void))
-                        {
-                            // Standard asynchronous call, put in a handler that will swap threads
-                            writeableInvocationHandlerField.SetValue(proxyInstance,
-                                                                     invocationHandler.GetInvocationHandlerFor(
-                                                                         methodCaller));
-                        }
-                        else
-                        {
-                            // Subinterface getter, put in a call that will get a wrapped subinterface
-                            writeableInvocationHandlerField.SetValue(proxyInstance,
-                                                                     invocationHandler.GetInvocationHandlerFor(
-                                                                         methodCaller));
-                        }
-                    });
+                    writeableInvocationHandlerField.SetValue(proxyInstance,
+                                                             invocationHandler.GetInvocationHandlerFor(
+                                                                 methodCaller));
+                });
 
             return proxyInstance;
         }
@@ -195,7 +187,7 @@ namespace NAct
 
                 // Create a field in which to put the IMethodInvocationHandler
                 FieldBuilder invocationHandlerField = typeBuilder.DefineField(c_FieldNameForInvocationHandler,
-                                                                              typeof (IMethodInvocationHandler),
+                                                                              typeof(IMethodInvocationHandler),
                                                                               FieldAttributes.Private);
                 Type[] parameterTypes = GetParameterTypes(signature);
                 MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public,
@@ -236,7 +228,7 @@ namespace NAct
                 }
             }
 
-            Action<object, object[]> caller = (Action<object, object[]>) CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
+            Action<object, object[]> caller = (Action<object, object[]>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Func<object, object[], object>), typeof(object));
 
             MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
@@ -328,7 +320,7 @@ namespace NAct
         private Delegate CreateCallerDelegate(MethodInfo methodToCall, Type delegateType, Type returnType)
         {
             TypeBuilder typeBuilder = GetFreshType();
-            MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public | MethodAttributes.Static, returnType, new[] {typeof(object), typeof(object[])});
+            MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public | MethodAttributes.Static, returnType, new[] { typeof(object), typeof(object[]) });
             ILGenerator ilGenerator = methodBuilder.GetILGenerator();
 
             // Load the target object
