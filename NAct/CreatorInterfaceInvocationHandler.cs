@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -9,9 +8,9 @@ namespace NAct
         private IInterfaceInvocationHandler m_RealInvocationHandler;
 
         /// <summary>
-        /// Something to lock on while co-ordinating construction
+        /// Something to wait on while constructing
         /// </summary>
-        private readonly object m_Sync;
+        private readonly ManualResetEvent m_FinishedEvent = new ManualResetEvent(false);
 
         /// <summary>
         /// Creates an interceptor for an object that doesn't exist yet.
@@ -22,24 +21,17 @@ namespace NAct
         {
             Hooking.BeforeQueueActorCall();
 
-            m_Sync = new object();
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
                     Hooking.ActorCallWrapper(
                         () =>
                         {
-                            lock (m_Sync)
-                            {
-                                IActor newObject = creator();
-                                ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
+                            IActor newObject = creator();
+                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
 
-                                // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
-                                // assigning it to the field, so that unsynchronised access to it is safe.
-                                Thread.MemoryBarrier();
-                                m_RealInvocationHandler = temp;
-                                Monitor.PulseAll(m_Sync);
-                            }
+                            m_RealInvocationHandler = temp;
+                            m_FinishedEvent.Set();
                         });
                 });
         }
@@ -52,46 +44,26 @@ namespace NAct
             Hooking.BeforeQueueActorCall();
 
             // We need to lock on the root when using an existing actor
-            m_Sync = rootObject;
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
                     Hooking.ActorCallWrapper(() =>
                     {
-                        lock (rootObject)
-                        {
-                            IActorComponent newObject = creator();
-                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, rootObject, proxyFactory);
+                        IActorComponent newObject = creator();
+                        ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, rootObject, proxyFactory);
 
-                            // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
-                            // assigning it to the field, so that unsynchronised access to it is safe.
-                            Thread.MemoryBarrier();
-                            m_RealInvocationHandler = temp;
-                            Monitor.PulseAll(m_Sync);
-                        }
+                        m_RealInvocationHandler = temp;
+                        m_FinishedEvent.Set();
                     });
                 });
         }
 
-        private void WaitForConstruction()
-        {
-            if (m_RealInvocationHandler == null)
-            {
-                // Have to wait for it to get made
-                lock (m_Sync)
-                {
-                    while (m_RealInvocationHandler == null)
-                    {
-                        // TODO Use a timed-out wait to mitigate the missed update problem
-                        Monitor.Wait(m_Sync);
-                    }
-                }
-            }
-        }
-
         public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
         {
-            WaitForConstruction();
+            if (!m_FinishedEvent.WaitOne(10000))
+            {
+                throw new TimeoutException("Object was not constructed fast enough");
+            }
 
             // Now m_RealInvocationHandler is definitely finished, forward to it
             return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller);
