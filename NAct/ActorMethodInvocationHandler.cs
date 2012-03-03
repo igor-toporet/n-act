@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -188,7 +187,7 @@ namespace NAct
         {
             ConvertParameters(parameterValues);
 
-            if (m_ReturnType == typeof (Task))
+            if (m_ReturnType == typeof(Task))
             {
                 // We are returning a Task
                 return CreateMethodCallerTask(parameterValues);
@@ -224,7 +223,7 @@ namespace NAct
             // Otherwise, we'd have to implement CreateMethodCallerTask<T> using reflection, which would be horrific.
             MethodInfo methodOfObject = GetMethodInfo<object[], Task<object>>(CreateMethodCallerTask<object>);
             MethodInfo methodOfT = methodOfObject.GetGenericMethodDefinition().MakeGenericMethod(t);
-            return methodOfT.Invoke(this, new []{parameterValues});
+            return methodOfT.Invoke(this, new[] { parameterValues });
         }
 
         private MethodInfo GetMethodInfo<TA, TR>(Func<TA, TR> func)
@@ -232,7 +231,22 @@ namespace NAct
             return func.Method;
         }
 
-        private async Task<T> CreateMethodCallerTask<T>(object[] parameterValues)
+        private Task<T> CreateMethodCallerTask<T>(object[] parameterValues)
+        {
+            return CreateMethodCallerTaskGeneric<T, Task<T>>(parameterValues, resultTask => resultTask);
+        }
+
+        private Task CreateMethodCallerTask(object[] parameterValues)
+        {
+            return CreateMethodCallerTaskGeneric<object, Task>(parameterValues,
+                                                               async resultTask =>
+                                                                         {
+                                                                             await resultTask;
+                                                                             return null;
+                                                                         });
+        }
+
+        private async Task<T> CreateMethodCallerTaskGeneric<T, TTask>(object[] parameterValues, Func<TTask, Task<T>> resultGetter) where TTask : Task
         {
             Future<T> future = new Future<T>();
 
@@ -241,12 +255,12 @@ namespace NAct
                     async () =>
                     {
                         // Call the method (which might only half-do itself)
-                        Task<T> resultTask = (Task<T>)CallTheReturningMethod(parameterValues);
+                        TTask resultTask = (TTask)CallTheReturningMethod(parameterValues);
 
                         // Don't want to switch to our SynchronizationContext on return, our caller will switch to their one in a sec anyway
                         resultTask.ConfigureAwait(false);
 
-                        T result = await resultTask;
+                        T result = await resultGetter(resultTask);
 
                         // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
                         future.Complete(result);
@@ -254,30 +268,6 @@ namespace NAct
 
             // And wait for it all to finish, thereby causing this method to become the appropriate Task
             return await future;
-        }
-
-        private async Task CreateMethodCallerTask(object[] parameterValues)
-        {
-            Future<object> future = new Future<object>();
-
-            // Switch thread to do the method
-            DoInRightThread(
-                    async () =>
-                    {
-                        // Call the method (which might only half-do itself)
-                        Task resultTask = (Task)CallTheReturningMethod(parameterValues);
-
-                        // Don't want to switch to our SynchronizationContext on return, our caller will switch to their one in a sec anyway
-                        resultTask.ConfigureAwait(false);
-
-                        await resultTask;
-
-                        // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
-                        future.Complete(null);
-                    });
-
-            // And wait for it all to finish, thereby causing this method to become the appropriate Task
-            await future;
         }
     }
 }

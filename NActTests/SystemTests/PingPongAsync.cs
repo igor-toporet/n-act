@@ -18,7 +18,7 @@ namespace NActTests.SystemTests
             IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
 
             pinger.Ping();
-            Thread.Sleep(1000);
+            Thread.Sleep(10000);
 
             Console.WriteLine(s_Count);
             Console.ReadKey();
