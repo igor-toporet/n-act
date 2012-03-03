@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -186,7 +188,17 @@ namespace NAct
         {
             ConvertParameters(parameterValues);
 
-            if (m_ReturnType != typeof(Task) && m_ReturnType != typeof(Task<>))
+            if (m_ReturnType == typeof (Task))
+            {
+                // We are returning a Task
+                return CreateMethodCallerTask(parameterValues);
+            }
+            else if (m_ReturnType.IsGenericType && typeof(Task) == m_ReturnType.BaseType)
+            {
+                // We are returning a Task<T>, need to use some reflection
+                return CreateMethodCallerTaskOfT(parameterValues, m_ReturnType.GenericTypeArguments[0]);
+            }
+            else
             {
                 // Sub-actor case
                 // This is only allowed if the method returns a IActorCompoment
@@ -204,16 +216,49 @@ namespace NAct
 
                 return m_ProxyFactory.CreateInterfaceProxy(invocationHandler, interfaceType, true);
             }
-            else
-            {
-                // We are returning a Task
-                return CreateMethodCallerTask(parameterValues);
-            }
+        }
+
+        private object CreateMethodCallerTaskOfT(object[] parameterValues, Type t)
+        {
+            // We do the hard work in a generic method, so here all we have to do using reflection is call said method.
+            // Otherwise, we'd have to implement CreateMethodCallerTask<T> using reflection, which would be horrific.
+            MethodInfo methodOfObject = GetMethodInfo<object[], Task<object>>(CreateMethodCallerTask<object>);
+            MethodInfo methodOfT = methodOfObject.GetGenericMethodDefinition().MakeGenericMethod(t);
+            return methodOfT.Invoke(this, new []{parameterValues});
+        }
+
+        private MethodInfo GetMethodInfo<TA, TR>(Func<TA, TR> func)
+        {
+            return func.Method;
+        }
+
+        private async Task<T> CreateMethodCallerTask<T>(object[] parameterValues)
+        {
+            Future<T> future = new Future<T>();
+
+            // Switch thread to do the method
+            DoInRightThread(
+                    async () =>
+                    {
+                        // Call the method (which might only half-do itself)
+                        Task<T> resultTask = (Task<T>)CallTheReturningMethod(parameterValues);
+
+                        // Don't want to switch to our SynchronizationContext on return, our caller will switch to their one in a sec anyway
+                        resultTask.ConfigureAwait(false);
+
+                        T result = await resultTask;
+
+                        // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
+                        future.Complete(result);
+                    });
+
+            // And wait for it all to finish, thereby causing this method to become the appropriate Task
+            return await future;
         }
 
         private async Task CreateMethodCallerTask(object[] parameterValues)
         {
-            Future future = new Future();
+            Future<object> future = new Future<object>();
 
             // Switch thread to do the method
             DoInRightThread(
@@ -228,7 +273,7 @@ namespace NAct
                         await resultTask;
 
                         // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
-                        future.Complete();
+                        future.Complete(null);
                     });
 
             // And wait for it all to finish, thereby causing this method to become the appropriate Task

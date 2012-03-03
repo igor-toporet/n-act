@@ -18,7 +18,7 @@ namespace NActTests.SystemTests
             IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
 
             pinger.Ping();
-            Thread.Sleep(10000);
+            Thread.Sleep(1000);
 
             Console.WriteLine(s_Count);
             Console.ReadKey();
@@ -37,7 +37,7 @@ namespace NActTests.SystemTests
             {
                 while (true)
                 {
-                    await m_Ponger.Pong();
+                    s_Count = await m_Ponger.Pong(s_Count);
                 }
             }
         }
@@ -49,16 +49,16 @@ namespace NActTests.SystemTests
 
         class Ponger : IPonger
         {
-            public async Task Pong()
+            public async Task<long> Pong(long count)
             {
-                s_Count++;
+                return count + 1;
             }
 
         }
 
         public interface IPonger : IActor
         {
-            Task Pong();
+            Task<long> Pong(long count);
         }
     }
 }

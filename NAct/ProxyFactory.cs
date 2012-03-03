@@ -72,10 +72,11 @@ namespace NAct
                     interfaceType,
                     delegate(MethodInfo eachMethod)
                     {
+                        Type type = eachMethod.ReturnType;
                         if (throwOnNonActorMethod && eachMethod.ReturnType != typeof(void) &&
                             !typeof(IActorComponent).IsAssignableFrom(eachMethod.ReturnType) &&
                             typeof(Task) != eachMethod.ReturnType &&
-                            typeof(Task<>) != eachMethod.ReturnType)
+                            !(type.IsGenericType && typeof(Task) == type.BaseType))
                         {
                             // The method has a return type which isn't a sub-actor or Task, fail fast
                             throw new InvalidOperationException("The interface " + interfaceType +

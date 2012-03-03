@@ -3,12 +3,13 @@ using System.Runtime.CompilerServices;
 
 namespace NAct
 {
-    class Future : IAwaitable, IAwaiter
+    class Future<T> : IAwaitable<T>, IAwaiter<T>
     {
         private readonly object m_Sync = new object();
 
         private Action m_Action;
         private bool m_Completed;
+        private T m_Result;
 
         public bool IsCompleted
         {
@@ -34,14 +35,16 @@ namespace NAct
             }
         }
 
-        public void GetResult()
+        public T GetResult()
         {
+            return m_Result;
         }
 
-        public void Complete()
+        public void Complete(T result)
         {
             lock (m_Sync)
             {
+                m_Result = result;
                 m_Completed = true;
 
                 Action action = m_Action;
@@ -52,21 +55,21 @@ namespace NAct
             }
         }
 
-        public IAwaiter GetAwaiter()
+        public IAwaiter<T> GetAwaiter()
         {
             return this;
         }
     }
 
-    interface IAwaitable
+    interface IAwaitable<T>
     {
-        IAwaiter GetAwaiter();
+        IAwaiter<T> GetAwaiter();
     }
 
-    interface IAwaiter : INotifyCompletion
+    interface IAwaiter<out T> : INotifyCompletion
     {
         bool IsCompleted { get; }
         void OnCompleted(Action action);
-        void GetResult();
+        T GetResult();
     }
 }
