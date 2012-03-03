@@ -46,8 +46,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActorMethodInvocationHandler.cs" />
+    <Compile Include="ActorSynchronizationContext.cs" />
     <Compile Include="AudienceInterfaceInvocationHandler.cs" />
     <Compile Include="AudienceMethodInvocationHandler.cs" />
+    <Compile Include="Future.cs" />
     <Compile Include="Hooking.cs" />
     <Compile Include="Utils\DictionaryActor.cs" />
     <Compile Include="CreatorInterfaceInvocationHandler.cs" />
