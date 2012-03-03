@@ -3,11 +3,10 @@ using System.Runtime.CompilerServices;
 
 namespace NAct
 {
-    /// <summary>
-    /// On the face of it, this is massively thread-unsafe. Not really sure how it ever works
-    /// </summary>
     class Future : IAwaitable, IAwaiter
     {
+        private readonly object m_Sync = new object();
+
         private Action m_Action;
         private bool m_Completed;
 
@@ -21,14 +20,17 @@ namespace NAct
 
         public void OnCompleted(Action action)
         {
-            if (m_Completed)
+            lock (m_Sync)
             {
-                // Sometimes, it finishes between IsCompleted being checked, and us being set.
-                action();
-            }
-            else
-            {
-                m_Action = action;
+                if (m_Completed)
+                {
+                    // Sometimes, it finishes between IsCompleted being checked, and us being set.
+                    action();
+                }
+                else
+                {
+                    m_Action = action;
+                }
             }
         }
 
@@ -38,12 +40,15 @@ namespace NAct
 
         public void Complete()
         {
-            m_Completed = true;
-
-            Action action = m_Action;
-            if (action != null)
+            lock (m_Sync)
             {
-                action();
+                m_Completed = true;
+
+                Action action = m_Action;
+                if (action != null)
+                {
+                    action();
+                }
             }
         }
 
