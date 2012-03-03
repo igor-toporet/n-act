@@ -37,8 +37,6 @@ namespace NActTests.SystemTests
             {
                 while (true)
                 {
-                    Console.WriteLine("Ping!");
-                    Monitor.Pulse(this); // Verify our thread owns the Actor's lock
                     await m_Ponger.Pong();
                 }
             }
@@ -53,8 +51,6 @@ namespace NActTests.SystemTests
         {
             public async Task Pong()
             {
-                Console.WriteLine("Pong!");
-                Monitor.Pulse(this); // Verify our thread owns the Actor's lock
                 s_Count++;
             }
 

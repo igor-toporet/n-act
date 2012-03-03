@@ -228,7 +228,7 @@ namespace NAct
                         await resultTask;
 
                         // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
-                        
+
                         //if (t.IsFaulted)
                         //{
                         //    asyncTaskMethodBuilder.SetException(t.Exception);
@@ -270,7 +270,15 @@ namespace NAct
 
         public void OnCompleted(Action action)
         {
-            m_Action = action;
+            if (m_Completed)
+            {
+                // Sometimes, it finishes between IsCompleted being checked, and us being set.
+                action();
+            }
+            else
+            {
+                m_Action = action;
+            }
         }
 
         public void GetResult()
@@ -314,7 +322,7 @@ namespace NAct
             // The important one, run the task in the actor's thread
             m_Executor(() => d(state));
         }
-        
+
         public override SynchronizationContext CreateCopy()
         {
             throw new NotSupportedException();
