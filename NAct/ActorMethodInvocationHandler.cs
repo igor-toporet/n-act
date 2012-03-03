@@ -1,26 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
-using NAct.Utils;
+using System.Threading.Tasks;
 
 namespace NAct
 {
     class ActorMethodInvocationHandler : MethodInvocationHandler
     {
-        private static readonly Dictionary<IActor, Queue<Action>> s_JobQueues = new Dictionary<IActor, Queue<Action>>(); 
+        private static readonly Dictionary<IActor, Queue<Action>> s_JobQueues = new Dictionary<IActor, Queue<Action>>();
 
         private readonly IActor m_Root;
         private readonly ProxyFactory m_ProxyFactory;
+        private readonly Type m_ReturnType;
 
         // This will be accessed in a thread-unsafe way. I believe the worst that can happen is calculating it twice.
         private bool? m_RootIsControl;
         private bool? m_RootIsWPFControl;
 
-        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
+        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory, Type returnType)
             : base(proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
             m_ProxyFactory = proxyFactory;
+            m_ReturnType = returnType;
         }
 
         public override void InvokeHappened(object[] parameterValues)
@@ -28,6 +31,11 @@ namespace NAct
             // A method has been called on the proxy
             ConvertParameters(parameterValues);
 
+            DoInRightThread(() => CallTheVoidMethod(parameterValues));
+        }
+
+        private void DoInRightThread(Action action)
+        {
             if (!m_RootIsWPFControl.HasValue)
             {
                 // Find whether this actor is a wpf control
@@ -44,18 +52,18 @@ namespace NAct
             Hooking.BeforeQueueActorCall();
 
             Queue<Action> queueForThisObject;
-            lock(s_JobQueues)
+            lock (s_JobQueues)
             {
-                if ( ! s_JobQueues.TryGetValue(m_Root, out queueForThisObject) )
+                if (!s_JobQueues.TryGetValue(m_Root, out queueForThisObject))
                 {
                     queueForThisObject = new Queue<Action>();
                     s_JobQueues[m_Root] = queueForThisObject;
                 }
             }
 
-            lock(queueForThisObject)
+            lock (queueForThisObject)
             {
-                queueForThisObject.Enqueue(() => BaseInvokeHappened(parameterValues));
+                queueForThisObject.Enqueue(action);
             }
 
             if (m_RootIsControl.Value)
@@ -88,22 +96,25 @@ namespace NAct
                     delegate
                     {
                         Hooking.ActorCallWrapper(() =>
-                                         {
-                                             lock (m_Root)
-                                             {
-                                                 RunNextQueueItem(m_Root, queueForThisObject);
-                                             }
-                                         });
+                                                     {
+                                                         lock (m_Root)
+                                                         {
+                                                             RunNextQueueItem(m_Root, queueForThisObject);
+                                                         }
+                                                     });
                     });
             }
         }
 
         private void RunNextQueueItem(IActor actor, Queue<Action> queueForThisObject)
         {
+            // Set the SyncronizationContext in case we end up awaiting a Task
+            SynchronizationContext.SetSynchronizationContext(new ActorSynchronizationContext(DoInRightThread));
+
             Action action;
-            lock(queueForThisObject)
+            lock (queueForThisObject)
             {
-                if(queueForThisObject.Count > 0)
+                if (queueForThisObject.Count > 0)
                 {
                     action = queueForThisObject.Dequeue();
                 }
@@ -111,9 +122,9 @@ namespace NAct
                 {
                     action = null;
                 }
-                if(queueForThisObject.Count == 0)
+                if (queueForThisObject.Count == 0)
                 {
-                    lock(s_JobQueues)
+                    lock (s_JobQueues)
                     {
                         // Remove from the dictionary so we do not stop the actor being garbage collected
                         s_JobQueues.Remove(actor);
@@ -131,9 +142,15 @@ namespace NAct
         /// http://stackoverflow.com/questions/405379/what-is-unverifiable-code-and-why-is-it-bad
         /// </summary
         /// >
-        private void BaseInvokeHappened(object[] parameterValues)
+        private void CallTheVoidMethod(object[] parameterValues)
         {
             base.InvokeHappened(parameterValues);
+        }
+
+        // Similarly
+        private object CallTheReturningMethod(object[] parameterValues)
+        {
+            return base.ReturningInvokeHappened(parameterValues);
         }
 
         private static bool IsWinformsControl(object obj)
@@ -169,28 +186,138 @@ namespace NAct
 
         public override object ReturningInvokeHappened(object[] parameterValues)
         {
-            // This is only allowed if the returning method gets a IActorCompoment
+            ConvertParameters(parameterValues);
 
-            // TODO Use a CIIH or something to run the getter method asynchronously in the root actor's thread
-            //CreatorInterfaceInvocationHandler creatorInvocationHandler = new CreatorInterfaceInvocationHandler(
-            //    () => (IActorComponent)m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues), m_Root, m_ProxyFactory);
-
-            object subInterfaceObject = base.ReturningInvokeHappened(parameterValues);
-
-            // Find the object's interface which implements IActor (it might have others, but this is the important one
-            Type interfaceType = null;
-            foreach (Type eachInterface in subInterfaceObject.GetType().GetInterfaces())
+            if (m_ReturnType != typeof(Task) && m_ReturnType != typeof(Task<>))
             {
-                if (typeof(IActorComponent).IsAssignableFrom(eachInterface))
-                {
-                    interfaceType = eachInterface;
-                    break;
-                }
+                // Sub-actor case
+                // This is only allowed if the method returns a IActorCompoment
+
+                // TODO Use a CIIH or something to run the getter method asynchronously in the root actor's thread
+                //CreatorInterfaceInvocationHandler creatorInvocationHandler = new CreatorInterfaceInvocationHandler(
+                //    () => (IActorComponent)m_MethodBeingProxied.Invoke(m_Wrapped, parameterValues), m_Root, m_ProxyFactory);
+
+                object subInterfaceObject = base.ReturningInvokeHappened(parameterValues);
+
+                // Find the object's interface which implements IActor
+                Type interfaceType = GetImplementedActorInterface(subInterfaceObject);
+
+                ActorInterfaceInvocationHandler invocationHandler = new ActorInterfaceInvocationHandler(subInterfaceObject, m_Root, m_ProxyFactory);
+
+                return m_ProxyFactory.CreateInterfaceProxy(invocationHandler, interfaceType, true);
             }
+            else
+            {
+                // We are returning a Task
+                return CreateMethodCallerTask(parameterValues);
+            }
+        }
 
-            ActorInterfaceInvocationHandler invocationHandler = new ActorInterfaceInvocationHandler(subInterfaceObject, m_Root, m_ProxyFactory);
+        private async Task CreateMethodCallerTask(object[] parameterValues)
+        {
+            Future future = new Future();
 
-            return m_ProxyFactory.CreateInterfaceProxy(invocationHandler, interfaceType, true);
+            // Switch thread to do the method
+            DoInRightThread(
+                    async () =>
+                    {
+                        // Call the method (which might only half-do itself)
+                        Task resultTask = (Task)CallTheReturningMethod(parameterValues);
+                        resultTask.ConfigureAwait(false);
+
+                        await resultTask;
+
+                        // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
+                        
+                        //if (t.IsFaulted)
+                        //{
+                        //    asyncTaskMethodBuilder.SetException(t.Exception);
+                        //}
+                        //else
+                        //{
+                        future.Complete();
+                        //}
+                    });
+
+            // And wait for it all to finish, thereby causing this method to become the appropriate Task
+            await future;
+        }
+    }
+
+    interface IAwaitable
+    {
+        IAwaiter GetAwaiter();
+    }
+
+    interface IAwaiter : INotifyCompletion
+    {
+        bool IsCompleted { get; }
+        void GetResult();
+    }
+
+    class Future : IAwaitable, IAwaiter
+    {
+        private Action m_Action;
+        private bool m_Completed;
+
+        public bool IsCompleted
+        {
+            get
+            {
+                return m_Completed;
+            }
+        }
+
+        public void OnCompleted(Action action)
+        {
+            m_Action = action;
+        }
+
+        public void GetResult()
+        {
+        }
+
+        public void Complete()
+        {
+            m_Completed = true;
+
+            Action action = m_Action;
+            if (action != null)
+            {
+                action();
+            }
+        }
+
+        public IAwaiter GetAwaiter()
+        {
+            return this;
+        }
+    }
+
+    class ActorSynchronizationContext : SynchronizationContext
+    {
+        private readonly Action<Action> m_Executor;
+
+        public ActorSynchronizationContext(Action<Action> executor)
+        {
+            m_Executor = executor;
+        }
+
+        public override void Send(SendOrPostCallback d, object state)
+        {
+            // Don't block while calling actors
+            throw new NotSupportedException();
+        }
+
+        public override void Post(SendOrPostCallback d, object state)
+        {
+            // The important one, run the task in the actor's thread
+            m_Executor(() => d(state));
+        }
+        
+        public override SynchronizationContext CreateCopy()
+        {
+            throw new NotSupportedException();
         }
     }
 }

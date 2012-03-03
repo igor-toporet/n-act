@@ -18,7 +18,7 @@ namespace NActTests.SystemTests
             IPinger pinger = ActorWrapper.WrapActor<IPinger>(() => new Pinger(ponger));
 
             pinger.Ping();
-            Thread.Sleep(1000);
+            Thread.Sleep(10000);
 
             Console.WriteLine(s_Count);
             Console.ReadKey();
@@ -37,6 +37,8 @@ namespace NActTests.SystemTests
             {
                 while (true)
                 {
+                    Console.WriteLine("Ping!");
+                    Monitor.Pulse(this); // Verify our thread owns the Actor's lock
                     await m_Ponger.Pong();
                 }
             }
@@ -51,6 +53,8 @@ namespace NActTests.SystemTests
         {
             public async Task Pong()
             {
+                Console.WriteLine("Pong!");
+                Monitor.Pulse(this); // Verify our thread owns the Actor's lock
                 s_Count++;
             }
 

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 
 namespace NAct
 {
@@ -15,10 +16,10 @@ namespace NAct
             m_RootForObject = rootForObject;
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType)
         {
 
-            return new ActorMethodInvocationHandler(m_RootForObject, m_Original, methodCaller, m_ProxyFactory);
+            return new ActorMethodInvocationHandler(m_RootForObject, m_Original, methodCaller, m_ProxyFactory, returnType);
         }
     }
 }

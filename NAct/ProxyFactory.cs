@@ -139,7 +139,7 @@ namespace NAct
 
                     writeableInvocationHandlerField.SetValue(proxyInstance,
                                                              invocationHandler.GetInvocationHandlerFor(
-                                                                 methodCaller));
+                                                                 methodCaller, eachMethod.ReturnType));
                 });
 
             return proxyInstance;
