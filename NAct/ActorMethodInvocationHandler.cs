@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -223,20 +222,14 @@ namespace NAct
                     {
                         // Call the method (which might only half-do itself)
                         Task resultTask = (Task)CallTheReturningMethod(parameterValues);
+
+                        // Don't want to switch to our SynchronizationContext on return, our caller will switch to their one in a sec anyway
                         resultTask.ConfigureAwait(false);
 
                         await resultTask;
 
                         // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
-
-                        //if (t.IsFaulted)
-                        //{
-                        //    asyncTaskMethodBuilder.SetException(t.Exception);
-                        //}
-                        //else
-                        //{
                         future.Complete();
-                        //}
                     });
 
             // And wait for it all to finish, thereby causing this method to become the appropriate Task
