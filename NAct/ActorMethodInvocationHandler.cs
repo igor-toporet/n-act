@@ -139,8 +139,7 @@ namespace NAct
         /// <summary>
         ///  I do this in a helper method to keep the code verifiable.
         /// http://stackoverflow.com/questions/405379/what-is-unverifiable-code-and-why-is-it-bad
-        /// </summary
-        /// >
+        /// </summary>
         private void CallTheVoidMethod(object[] parameterValues)
         {
             base.InvokeHappened(parameterValues);
