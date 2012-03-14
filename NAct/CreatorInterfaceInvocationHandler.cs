@@ -60,13 +60,47 @@ namespace NAct
 
         public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
         {
-            if (!m_FinishedEvent.WaitOne(10000))
+            if (m_FinishedEvent.WaitOne(0))
             {
-                throw new TimeoutException("Object was not constructed fast enough");
+                // m_RealInvocationHandler is already finished, forward to it
+                return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller);
+            }
+            else
+            {
+                // It's taking a while to construct, use something that will forward to it once it's finished
+                return new CreatorMethodInvocationHandler(this, methodCaller);
+            }
+        }
+
+        class CreatorMethodInvocationHandler : IMethodInvocationHandler
+        {
+            private readonly CreatorInterfaceInvocationHandler m_CreatorInterfaceInvocationHandler;
+            private readonly MethodCaller m_MethodCaller;
+
+            public CreatorMethodInvocationHandler(CreatorInterfaceInvocationHandler creatorInterfaceInvocationHandler, MethodCaller methodCaller)
+            {
+                m_CreatorInterfaceInvocationHandler = creatorInterfaceInvocationHandler;
+                m_MethodCaller = methodCaller;
             }
 
-            // Now m_RealInvocationHandler is definitely finished, forward to it
-            return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller);
+            public void InvokeHappened(object[] parameterValues)
+            {
+                WaitForRealMethodInvocationHandler().InvokeHappened(parameterValues);
+            }
+
+            private IMethodInvocationHandler WaitForRealMethodInvocationHandler()
+            {
+                // Wait for the real invocation handler to finish being contructed
+                m_CreatorInterfaceInvocationHandler.m_FinishedEvent.WaitOne();
+
+                IMethodInvocationHandler realMethodInvocationHandler = m_CreatorInterfaceInvocationHandler.m_RealInvocationHandler.GetInvocationHandlerFor(m_MethodCaller);
+                return realMethodInvocationHandler;
+            }
+
+            public object ReturningInvokeHappened(object[] parameterValues)
+            {
+                return WaitForRealMethodInvocationHandler().ReturningInvokeHappened(parameterValues);
+            }
         }
     }
 }
