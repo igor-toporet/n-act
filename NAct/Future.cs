@@ -66,7 +66,7 @@ namespace NAct
         IAwaiter<T> GetAwaiter();
     }
 
-    interface IAwaiter<out T> : INotifyCompletion
+    interface IAwaiter<out T>
     {
         bool IsCompleted { get; }
         void OnCompleted(Action action);
