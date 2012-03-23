@@ -26,7 +26,8 @@ namespace NAct
 
         public override SynchronizationContext CreateCopy()
         {
-            throw new NotSupportedException();
+            // We are immutable, no need to copy
+            return this;
         }
     }
 }
