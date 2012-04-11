@@ -11,6 +11,7 @@ namespace NAct
         private static readonly Dictionary<IActor, Queue<Action>> s_JobQueues = new Dictionary<IActor, Queue<Action>>();
 
         private readonly IActor m_Root;
+        private readonly MethodCaller m_MethodCaller;
         private readonly ProxyFactory m_ProxyFactory;
         private readonly Type m_ReturnType;
 
@@ -22,6 +23,7 @@ namespace NAct
             : base(proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
+            m_MethodCaller = methodCaller;
             m_ProxyFactory = proxyFactory;
             m_ReturnType = returnType;
         }
@@ -29,6 +31,8 @@ namespace NAct
         public override void InvokeHappened(object[] parameterValues)
         {
             // A method has been called on the proxy
+            Hooking.BeforeActorCallQueued(m_Root.GetType(), m_MethodCaller.TargetMethod, parameterValues);
+
             ConvertParameters(parameterValues);
 
             DoInRightThread(() => CallTheVoidMethod(parameterValues));
@@ -48,8 +52,6 @@ namespace NAct
                 // Find whether this actor is a winforms control
                 m_RootIsControl = IsWinformsControl(m_Root);
             }
-
-            Hooking.BeforeQueueActorCall();
 
             Queue<Action> queueForThisObject;
             lock (s_JobQueues)
@@ -110,6 +112,8 @@ namespace NAct
         {
             // Set the SyncronizationContext in case we end up awaiting a Task
             SynchronizationContext.SetSynchronizationContext(new ActorSynchronizationContext(DoInRightThread));
+
+            Hooking.BeforeActorMethodRun(m_Root.GetType(), m_MethodCaller.TargetMethod);
 
             Action action;
             lock (queueForThisObject)

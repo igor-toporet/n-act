@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using NAct.Utils;
 
 namespace NAct
@@ -10,11 +11,13 @@ namespace NAct
     {
         private readonly Action<object, object[]> m_MethodCaller;
         private readonly Func<object, object[], object> m_ReturningMethodCaller;
+        private readonly MethodInfo m_TargetMethod;
 
-        public MethodCaller(Action<object, object[]> methodCaller, Func<object, object[], object> returningMethodCaller)
+        public MethodCaller(Action<object, object[]> methodCaller, Func<object, object[], object> returningMethodCaller, MethodInfo targetMethod)
         {
             m_MethodCaller = methodCaller;
             m_ReturningMethodCaller = returningMethodCaller;
+            m_TargetMethod = targetMethod;
         }
 
         /// <summary>
@@ -35,6 +38,14 @@ namespace NAct
         public object CallReturningMethod(object target, object[] parameters)
         {
             return m_ReturningMethodCaller(target, parameters);
+        }
+
+        public MethodInfo TargetMethod
+        {
+            get
+            {
+                return m_TargetMethod;
+            }
         }
     }
 }
