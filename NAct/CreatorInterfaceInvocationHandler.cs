@@ -85,12 +85,12 @@ namespace NAct
             }
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
         {
             WaitForConstruction();
 
             // Now m_RealInvocationHandler is definitely finished, forward to it
-            return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller, returnType);
+            return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller, returnType, targetMethod);
         }
     }
 }

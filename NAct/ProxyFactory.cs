@@ -140,7 +140,7 @@ namespace NAct
 
                     writeableInvocationHandlerField.SetValue(proxyInstance,
                                                              invocationHandler.GetInvocationHandlerFor(
-                                                                 methodCaller, eachMethod.ReturnType));
+                                                                 methodCaller, eachMethod.ReturnType, eachMethod));
                 });
 
             return proxyInstance;
@@ -232,7 +232,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, delegateSignature);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
 
             lock (m_Sync)
             {
@@ -308,7 +308,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>)CreateCallerDelegate(methodToCall, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateCallerDelegate(methodToCall, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, methodToCall);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
 
             lock (m_Sync)
             {

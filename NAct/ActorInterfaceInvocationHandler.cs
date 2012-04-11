@@ -16,10 +16,10 @@ namespace NAct
             m_RootForObject = rootForObject;
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
         {
 
-            return new ActorMethodInvocationHandler(m_RootForObject, m_Original, methodCaller, m_ProxyFactory, returnType);
+            return new ActorMethodInvocationHandler(m_RootForObject, m_Original, methodCaller, m_ProxyFactory, returnType, targetMethod);
         }
     }
 }

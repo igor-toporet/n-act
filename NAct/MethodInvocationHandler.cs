@@ -115,7 +115,7 @@ namespace NAct
                                                             " has a non-void return type. Actors may only be given callbacks with void return types.");
                     }
                     MethodCaller delegateMethodCaller = m_ProxyFactory.CreateDelegateCaller(originalAsDelegate.GetType(), originalAsDelegate.Method);
-                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate, delegateMethodCaller, m_ProxyFactory, returnType);
+                    ActorMethodInvocationHandler methodInvocationHandler = new ActorMethodInvocationHandler(rootForObject, originalAsDelegate, delegateMethodCaller, m_ProxyFactory, returnType, originalAsDelegate.Method);
                     return m_ProxyFactory.CreateDelegateProxy(methodInvocationHandler, originalAsDelegate.Method, original.GetType());
                 }
                 else
