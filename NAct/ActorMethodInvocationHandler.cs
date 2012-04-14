@@ -10,6 +10,7 @@ namespace NAct
         private static readonly Dictionary<IActor, Queue<Action>> s_JobQueues = new Dictionary<IActor, Queue<Action>>(); 
 
         private readonly IActor m_Root;
+        private readonly MethodCaller m_MethodCaller;
         private readonly ProxyFactory m_ProxyFactory;
 
         // This will be accessed in a thread-unsafe way. I believe the worst that can happen is calculating it twice.
@@ -20,12 +21,15 @@ namespace NAct
             : base(proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
+            m_MethodCaller = methodCaller;
             m_ProxyFactory = proxyFactory;
         }
 
         public override void InvokeHappened(object[] parameterValues)
         {
             // A method has been called on the proxy
+            Hooking.BeforeActorCallQueued(m_Root.GetType(), m_MethodCaller.TargetMethod, parameterValues);
+
             ConvertParameters(parameterValues);
 
             if (!m_RootIsWPFControl.HasValue)
@@ -40,8 +44,6 @@ namespace NAct
                 // Find whether this actor is a winforms control
                 m_RootIsControl = IsWinformsControl(m_Root);
             }
-
-            Hooking.BeforeQueueActorCall();
 
             Queue<Action> queueForThisObject;
             lock(s_JobQueues)
@@ -100,6 +102,8 @@ namespace NAct
 
         private void RunNextQueueItem(IActor actor, Queue<Action> queueForThisObject)
         {
+			Hooking.BeforeActorMethodRun(m_Root.GetType(), m_MethodCaller.TargetMethod);
+
             Action action;
             lock(queueForThisObject)
             {

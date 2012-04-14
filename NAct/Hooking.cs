@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using NAct.Utils;
 
 namespace NAct
@@ -6,13 +7,15 @@ namespace NAct
     public class Hooking
     {
         public static Action<Action> ActorCallWrapper { internal get; set; }
-        public static Action BeforeQueueActorCall { internal get; set; }
+        public static Action<Type, MethodInfo> BeforeActorMethodRun { internal get; set; }
+        public static Action<Type, MethodInfo, object[]> BeforeActorCallQueued { internal get; set; }
 
 
         static Hooking()
         {
             ActorCallWrapper = DefaultActorCallWrapper;
-            BeforeQueueActorCall = DoNothing;
+            BeforeActorMethodRun = DoNothing;
+            BeforeActorCallQueued = DoNothing;
         }
 
         private static void DefaultActorCallWrapper(Action action)
@@ -27,9 +30,14 @@ namespace NAct
             }
         }
 
-        private static void DoNothing()
+        private static void DoNothing(Type type, MethodInfo methodInfo)
         {
-            
+
+        }
+
+        private static void DoNothing(Type type, MethodInfo methodInfo, object[] parameters)
+        {
+
         }
     }
 }

@@ -239,7 +239,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>) CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, delegateSignature);
 
             lock (m_Sync)
             {
@@ -315,7 +315,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>)CreateCallerDelegate(methodToCall, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateCallerDelegate(methodToCall, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, methodToCall);
 
             lock (m_Sync)
             {
