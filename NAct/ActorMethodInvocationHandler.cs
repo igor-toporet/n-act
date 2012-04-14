@@ -201,7 +201,7 @@ namespace NAct
             else if (m_ReturnType.IsGenericType && typeof(Task) == m_ReturnType.BaseType)
             {
                 // We are returning a Task<T>, need to use some reflection
-                return CreateMethodCallerTaskOfT(parameterValues, m_ReturnType.GenericTypeArguments[0]);
+                return CreateMethodCallerTaskOfT(parameterValues, m_ReturnType.GetGenericArguments()[0]);
             }
             else
             {
