@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading;
 
 namespace NAct
@@ -54,17 +55,17 @@ namespace NAct
                 });
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
         {
             if (m_FinishedEvent.WaitOne(0))
             {
                 // m_RealInvocationHandler is already finished, forward to it
-                return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller);
+                return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller, returnType, targetMethod);
             }
             else
             {
                 // It's taking a while to construct, use something that will forward to it once it's finished
-                return new CreatorMethodInvocationHandler(this, methodCaller);
+                return new CreatorMethodInvocationHandler(this, methodCaller, returnType, targetMethod);
             }
         }
 
@@ -72,11 +73,15 @@ namespace NAct
         {
             private readonly CreatorInterfaceInvocationHandler m_CreatorInterfaceInvocationHandler;
             private readonly MethodCaller m_MethodCaller;
+            private readonly Type m_ReturnType;
+            private readonly MethodInfo m_TargetMethod;
 
-            public CreatorMethodInvocationHandler(CreatorInterfaceInvocationHandler creatorInterfaceInvocationHandler, MethodCaller methodCaller)
+            public CreatorMethodInvocationHandler(CreatorInterfaceInvocationHandler creatorInterfaceInvocationHandler, MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
             {
                 m_CreatorInterfaceInvocationHandler = creatorInterfaceInvocationHandler;
                 m_MethodCaller = methodCaller;
+                m_ReturnType = returnType;
+                m_TargetMethod = targetMethod;
             }
 
             public void InvokeHappened(object[] parameterValues)
@@ -89,7 +94,7 @@ namespace NAct
                 // Wait for the real invocation handler to finish being contructed
                 m_CreatorInterfaceInvocationHandler.m_FinishedEvent.WaitOne();
 
-                IMethodInvocationHandler realMethodInvocationHandler = m_CreatorInterfaceInvocationHandler.m_RealInvocationHandler.GetInvocationHandlerFor(m_MethodCaller);
+                IMethodInvocationHandler realMethodInvocationHandler = m_CreatorInterfaceInvocationHandler.m_RealInvocationHandler.GetInvocationHandlerFor(m_MethodCaller, m_ReturnType, m_TargetMethod);
                 return realMethodInvocationHandler;
             }
 

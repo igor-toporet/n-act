@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using NAct.Utils;
 
@@ -12,23 +13,25 @@ namespace NAct
         private readonly IActor m_Root;
         private readonly MethodCaller m_MethodCaller;
         private readonly ProxyFactory m_ProxyFactory;
+        private readonly MethodInfo m_TargetMethod;
 
         // This will be accessed in a thread-unsafe way. I believe the worst that can happen is calculating it twice.
         private bool? m_RootIsControl;
         private bool? m_RootIsWPFControl;
 
-        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory)
+        public ActorMethodInvocationHandler(IActor root, object wrapped, MethodCaller methodCaller, ProxyFactory proxyFactory, Type returnType, MethodInfo targetMethod)
             : base(proxyFactory, methodCaller, wrapped)
         {
             m_Root = root;
             m_MethodCaller = methodCaller;
             m_ProxyFactory = proxyFactory;
+            m_TargetMethod = targetMethod;
         }
 
         public override void InvokeHappened(object[] parameterValues)
         {
             // A method has been called on the proxy
-            Hooking.BeforeActorCallQueued(m_Root.GetType(), m_MethodCaller.TargetMethod, parameterValues);
+            Hooking.BeforeActorCallQueued(m_Root.GetType(), m_TargetMethod, parameterValues);
 
             ConvertParameters(parameterValues);
 
@@ -102,7 +105,7 @@ namespace NAct
 
         private void RunNextQueueItem(IActor actor, Queue<Action> queueForThisObject)
         {
-			Hooking.BeforeActorMethodRun(m_Root.GetType(), m_MethodCaller.TargetMethod);
+            Hooking.BeforeActorMethodRun(m_Root.GetType(), m_TargetMethod);
 
             Action action;
             lock(queueForThisObject)

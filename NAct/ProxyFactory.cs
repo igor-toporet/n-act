@@ -134,20 +134,9 @@ namespace NAct
 
                         MethodCaller methodCaller = CreateMethodCaller(eachMethod);
 
-                        if (eachMethod.ReturnType == typeof (void))
-                        {
-                            // Standard asynchronous call, put in a handler that will swap threads
-                            writeableInvocationHandlerField.SetValue(proxyInstance,
-                                                                     invocationHandler.GetInvocationHandlerFor(
-                                                                         methodCaller));
-                        }
-                        else
-                        {
-                            // Subinterface getter, put in a call that will get a wrapped subinterface
-                            writeableInvocationHandlerField.SetValue(proxyInstance,
-                                                                     invocationHandler.GetInvocationHandlerFor(
-                                                                         methodCaller));
-                        }
+                        writeableInvocationHandlerField.SetValue(proxyInstance,
+                                                                    invocationHandler.GetInvocationHandlerFor(
+                                                                        methodCaller, eachMethod.ReturnType, eachMethod));
                     });
 
             return proxyInstance;
@@ -239,7 +228,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>) CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateDelegateCallerDelegate(delegateType, delegateSignature, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, delegateSignature);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
 
             lock (m_Sync)
             {
@@ -315,7 +304,7 @@ namespace NAct
             Action<object, object[]> caller = (Action<object, object[]>)CreateCallerDelegate(methodToCall, typeof(Action<object, object[]>), typeof(void));
             Func<object, object[], object> returningCaller = (Func<object, object[], object>)CreateCallerDelegate(methodToCall, typeof(Func<object, object[], object>), typeof(object));
 
-            MethodCaller methodCaller = new MethodCaller(caller, returningCaller, methodToCall);
+            MethodCaller methodCaller = new MethodCaller(caller, returningCaller);
 
             lock (m_Sync)
             {
