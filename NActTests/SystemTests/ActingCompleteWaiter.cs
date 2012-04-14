@@ -13,11 +13,11 @@ namespace NActTests.SystemTests
 
         static ActingCompleteWaiter()
         {
-            Hooking.BeforeQueueActorCall = () =>
-                                               {
-                                                   Interlocked.Increment(ref m_OutstandingJobs);
-                                                   m_WaitEvent.Reset();
-                                               };
+            Hooking.BeforeActorCallQueued = delegate
+                                                {
+                                                    Interlocked.Increment(ref m_OutstandingJobs);
+                                                    m_WaitEvent.Reset();
+                                                };
             Hooking.ActorCallWrapper = action =>
                                            {
                                                try

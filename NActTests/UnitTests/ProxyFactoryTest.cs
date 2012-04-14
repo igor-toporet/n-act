@@ -146,7 +146,7 @@ namespace NActTests.UnitTests
                 m_Parent = parent;
             }
 
-            public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller)
+            public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
             {
                 return new MyInvocationHandler(m_Parent);
             }
