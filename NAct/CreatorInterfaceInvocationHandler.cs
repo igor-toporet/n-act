@@ -89,7 +89,7 @@ namespace NAct
                 WaitForRealMethodInvocationHandler().InvokeHappened(parameterValues);
             }
 
-            private IMethodInvocationHandler WaitForRealMethodInvocationHandler()
+            public IMethodInvocationHandler WaitForRealMethodInvocationHandler()
             {
                 // Wait for the real invocation handler to finish being contructed
                 m_CreatorInterfaceInvocationHandler.m_FinishedEvent.WaitOne();

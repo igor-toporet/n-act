@@ -150,6 +150,7 @@ namespace NActTests.UnitTests
             {
                 return new MyInvocationHandler(m_Parent);
             }
+
         }
 
         private class MyInvocationHandler : IMethodInvocationHandler

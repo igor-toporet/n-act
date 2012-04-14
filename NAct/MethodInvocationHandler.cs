@@ -102,6 +102,7 @@ namespace NAct
 
             if (rootForObject != null)
             {
+                // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
                 Delegate originalAsDelegate = original as Delegate;
                 if (originalAsDelegate != null)
                 {
@@ -119,23 +120,14 @@ namespace NAct
                 }
                 else
                 {
-                    // Yep, this object needs to be wrapped to move back to its actor's logical thread when it's used
+                    // Ordinary case, only used for passing Actors themseleves around, for example "this" pointers
                     ActorInterfaceInvocationHandler callbackInterceptor = new ActorInterfaceInvocationHandler(original, rootForObject, m_ProxyFactory);
 
-                    // Find the object's interface which implements IActor (it might have others, but this is the important one)
-                    Type interfaceType = null;
-                    foreach (Type eachInterface in original.GetType().GetInterfaces())
-                    {
-                        if (typeof(IActor).IsAssignableFrom(eachInterface) && !eachInterface.Equals(typeof(IActor)))
-                        {
-                            interfaceType = eachInterface;
-                            break;
-                        }
-                    }
+                    var interfaceType = GetImplementedActorInterface(original);
 
                     if (interfaceType == null)
                     {
-                        throw new ApplicationException("NAct encountered an internal inconsistency and will eat your cake.");
+                        throw new InvalidOperationException("NAct encountered an internal inconsistency and will eat your cake.");
                     }
 
                     return m_ProxyFactory.CreateInterfaceProxy(callbackInterceptor, interfaceType, true);
@@ -143,6 +135,19 @@ namespace NAct
             }
 
             return original;
+        }
+
+        protected static Type GetImplementedActorInterface(object original)
+        {
+            // Find the object's interface which implements IActor (it might have others, but this is the important one)
+            foreach (Type eachInterface in original.GetType().GetInterfaces())
+            {
+                if (typeof (IActor).IsAssignableFrom(eachInterface) && !eachInterface.Equals(typeof (IActor)))
+                {
+                    return eachInterface;
+                }
+            }
+            return null;
         }
 
         /// <summary>
