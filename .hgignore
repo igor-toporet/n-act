@@ -10,3 +10,4 @@ Build/Release/NAct.pdb
 *.dll
 *.pdb
 packages
+*.nupkg
