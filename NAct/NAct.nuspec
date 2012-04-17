@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <version>1.2.0</version>
+    <authors>Alex Davies</authors>
+    <owners />
+    <projectUrl>http://code.google.com/p/n-act/</projectUrl>
+    <dependencies>
+      <dependency id="AsyncBridge" version="0.1.2" />
+    </dependencies>
+    <id>NAct</id>
+    <title />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NAct is an Actors framework for the .NET platform. It's type-safe, so message passing is simply calling a method on another actor.</description>
+  </metadata>
+  <files>
+    <file src="..\Build\Release\NAct.dll" target="lib\NAct.dll" />
+  </files>
+</package>
