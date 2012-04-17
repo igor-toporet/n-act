@@ -40,16 +40,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AsyncBridge">
-      <HintPath>..\packages\AsyncBridge.0.1.0\lib\net40\AsyncBridge.dll</HintPath>
+      <HintPath>..\packages\AsyncBridge.0.1.2\lib\net40-Client\AsyncBridge.dll</HintPath>
     </Reference>
     <Reference Include="nunit.framework, Version=2.5.10.11092, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\NUnit 2.5.10\bin\net-2.0\framework\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.CoreEx">
-      <HintPath>..\packages\Rx-Core-old.1.0.2856.0\lib\Net4\System.CoreEx.dll</HintPath>
-    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
