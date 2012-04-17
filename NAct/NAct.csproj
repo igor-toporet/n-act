@@ -43,12 +43,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AsyncBridge">
-      <HintPath>..\packages\AsyncBridge.0.1.0\lib\net40\AsyncBridge.dll</HintPath>
+      <HintPath>..\packages\AsyncBridge.0.1.2\lib\net40-Client\AsyncBridge.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.CoreEx">
-      <HintPath>..\packages\Rx-Core-old.1.0.2856.0\lib\Net4\System.CoreEx.dll</HintPath>
-    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
