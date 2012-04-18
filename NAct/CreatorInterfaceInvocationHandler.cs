@@ -9,9 +9,9 @@ namespace NAct
         private IInterfaceInvocationHandler m_RealInvocationHandler;
 
         /// <summary>
-        /// Something to lock on while co-ordinating construction
+        /// Something to wait on while constructing
         /// </summary>
-        private readonly object m_Sync;
+        private readonly ManualResetEvent m_FinishedEvent = new ManualResetEvent(false);
 
         /// <summary>
         /// Creates an interceptor for an object that doesn't exist yet.
@@ -20,24 +20,17 @@ namespace NAct
         /// </summary>
         public CreatorInterfaceInvocationHandler(ObjectCreator<IActor> creator, ProxyFactory proxyFactory)
         {
-            m_Sync = new object();
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
                     Hooking.ActorCallWrapper(
                         () =>
                         {
-                            lock (m_Sync)
-                            {
-                                IActor newObject = creator();
-                                ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
+                            IActor newObject = creator();
+                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, newObject, proxyFactory);
 
-                                // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
-                                // assigning it to the field, so that unsynchronised access to it is safe.
-                                Thread.MemoryBarrier();
-                                m_RealInvocationHandler = temp;
-                                Monitor.PulseAll(m_Sync);
-                            }
+                            m_RealInvocationHandler = temp;
+                            m_FinishedEvent.Set();
                         });
                 });
         }
@@ -48,49 +41,67 @@ namespace NAct
         internal CreatorInterfaceInvocationHandler(ObjectCreator<IActorComponent> creator, IActor rootObject, ProxyFactory proxyFactory)
         {
             // We need to lock on the root when using an existing actor
-            m_Sync = rootObject;
             ThreadPool.QueueUserWorkItem(
                 delegate
                 {
                     Hooking.ActorCallWrapper(() =>
                     {
-                        lock (rootObject)
-                        {
-                            IActorComponent newObject = creator();
-                            ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, rootObject, proxyFactory);
+                        IActorComponent newObject = creator();
+                        ActorInterfaceInvocationHandler temp = new ActorInterfaceInvocationHandler(newObject, rootObject, proxyFactory);
 
-                            // Need to make sure that the ThreaderInterceptor is completely finished being constructed before
-                            // assigning it to the field, so that unsynchronised access to it is safe.
-                            Thread.MemoryBarrier();
-                            m_RealInvocationHandler = temp;
-                            Monitor.PulseAll(m_Sync);
-                        }
+                        m_RealInvocationHandler = temp;
+                        m_FinishedEvent.Set();
                     });
                 });
         }
 
-        private void WaitForConstruction()
+        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
         {
-            if (m_RealInvocationHandler == null)
+            if (m_FinishedEvent.WaitOne(0))
             {
-                // Have to wait for it to get made
-                lock (m_Sync)
-                {
-                    while (m_RealInvocationHandler == null)
-                    {
-                        // TODO Use a timed-out wait to mitigate the missed update problem
-                        Monitor.Wait(m_Sync);
-                    }
-                }
+                // m_RealInvocationHandler is already finished, forward to it
+                return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller, returnType, targetMethod);
+            }
+            else
+            {
+                // It's taking a while to construct, use something that will forward to it once it's finished
+                return new CreatorMethodInvocationHandler(this, methodCaller, returnType, targetMethod);
             }
         }
 
-        public IMethodInvocationHandler GetInvocationHandlerFor(MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
+        class CreatorMethodInvocationHandler : IMethodInvocationHandler
         {
-            WaitForConstruction();
+            private readonly CreatorInterfaceInvocationHandler m_CreatorInterfaceInvocationHandler;
+            private readonly MethodCaller m_MethodCaller;
+            private readonly Type m_ReturnType;
+            private readonly MethodInfo m_TargetMethod;
 
-            // Now m_RealInvocationHandler is definitely finished, forward to it
-            return m_RealInvocationHandler.GetInvocationHandlerFor(methodCaller, returnType, targetMethod);
+            public CreatorMethodInvocationHandler(CreatorInterfaceInvocationHandler creatorInterfaceInvocationHandler, MethodCaller methodCaller, Type returnType, MethodInfo targetMethod)
+            {
+                m_CreatorInterfaceInvocationHandler = creatorInterfaceInvocationHandler;
+                m_MethodCaller = methodCaller;
+                m_ReturnType = returnType;
+                m_TargetMethod = targetMethod;
+            }
+
+            public void InvokeHappened(object[] parameterValues)
+            {
+                WaitForRealMethodInvocationHandler().InvokeHappened(parameterValues);
+            }
+
+            public IMethodInvocationHandler WaitForRealMethodInvocationHandler()
+            {
+                // Wait for the real invocation handler to finish being contructed
+                m_CreatorInterfaceInvocationHandler.m_FinishedEvent.WaitOne();
+
+                IMethodInvocationHandler realMethodInvocationHandler = m_CreatorInterfaceInvocationHandler.m_RealInvocationHandler.GetInvocationHandlerFor(m_MethodCaller, m_ReturnType, m_TargetMethod);
+                return realMethodInvocationHandler;
+            }
+
+            public object ReturningInvokeHappened(object[] parameterValues)
+            {
+                return WaitForRealMethodInvocationHandler().ReturningInvokeHappened(parameterValues);
+            }
         }
     }
 }
