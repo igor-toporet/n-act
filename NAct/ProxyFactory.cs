@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
-using NAct.Utils;
 
 namespace NAct
 {
@@ -31,12 +30,12 @@ namespace NAct
             m_DynamicModule = m_DynamicAssembly.DefineDynamicModule("dynamic.dll", "dynamic.dll");
         }
 
-        private TypeBuilder GetFreshType()
+        private TypeBuilder GetFreshType(string nameHint)
         {
             lock (m_Sync)
             {
                 m_TypeIndex++;
-                return m_DynamicModule.DefineType("DynamicType" + m_TypeIndex);
+                return m_DynamicModule.DefineType("Proxy_" + nameHint + "_" + m_TypeIndex);
             }
         }
 
@@ -66,7 +65,7 @@ namespace NAct
 
             if (proxyType == null)
             {
-                TypeBuilder typeBuilder = GetFreshType();
+                TypeBuilder typeBuilder = GetFreshType(interfaceType.Name);
 
                 ForEveryMethodIncludingSuperInterfaces(
                     interfaceType,
@@ -184,7 +183,7 @@ namespace NAct
 
             if (proxyType == null)
             {
-                TypeBuilder typeBuilder = GetFreshType();
+                TypeBuilder typeBuilder = GetFreshType(delegateType.Name);
 
                 // Create a field in which to put the IMethodInvocationHandler
                 FieldBuilder invocationHandlerField = typeBuilder.DefineField(c_FieldNameForInvocationHandler,
@@ -244,7 +243,7 @@ namespace NAct
 
         private Delegate CreateDelegateCallerDelegate(Type targetDelegateType, MethodInfo targetDelegateSignature, Type shimDelegateType, Type returnType)
         {
-            TypeBuilder typeBuilder = GetFreshType();
+            TypeBuilder typeBuilder = GetFreshType(targetDelegateType.Name);
             MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public | MethodAttributes.Static, returnType, new[] { typeof(object), typeof(object[]) });
             ILGenerator ilGenerator = methodBuilder.GetILGenerator();
 
@@ -320,7 +319,7 @@ namespace NAct
 
         private Delegate CreateCallerDelegate(MethodInfo methodToCall, Type delegateType, Type returnType)
         {
-            TypeBuilder typeBuilder = GetFreshType();
+            TypeBuilder typeBuilder = GetFreshType(methodToCall.Name);
             MethodBuilder methodBuilder = typeBuilder.DefineMethod(c_DelegateMethodName, MethodAttributes.Public | MethodAttributes.Static, returnType, new[] { typeof(object), typeof(object[]) });
             ILGenerator ilGenerator = methodBuilder.GetILGenerator();
 
