@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <projectUrl>http://code.google.com/p/n-act/</projectUrl>
+    <dependencies>
+      <dependency id="AsyncBridge" version="0.1.2" />
+    </dependencies>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <copyright>Copyright 2012</copyright>
+  </metadata>
+  <files>
+    <file src="..\Build\Release\NAct.dll" target="lib\NET40\NAct.dll" />
+  </files>
+</package>
