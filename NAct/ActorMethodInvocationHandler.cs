@@ -252,9 +252,9 @@ namespace NAct
                                                                          });
         }
 
-        private async Task<T> CreateMethodCallerTaskGeneric<T, TTask>(object[] parameterValues, Func<TTask, Task<T>> resultGetter) where TTask : Task
+        private Task<T> CreateMethodCallerTaskGeneric<T, TTask>(object[] parameterValues, Func<TTask, Task<T>> resultGetter) where TTask : Task
         {
-            Future<T> future = new Future<T>();
+            TaskCompletionSource<T> future = new TaskCompletionSource<T>();
 
             // Switch thread to do the method
             DoInRightThread(
@@ -269,11 +269,11 @@ namespace NAct
                         T result = await resultGetter(resultTask);
 
                         // Now the method is completely finished, put its return value in the builder, causing the caller to get called back
-                        future.Complete(result);
+                        future.SetResult(result);
                     });
 
             // And wait for it all to finish, thereby causing this method to become the appropriate Task
-            return await future;
+            return future.Task;
         }
     }
 }
