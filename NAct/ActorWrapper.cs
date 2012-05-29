@@ -20,7 +20,19 @@
         public static TActorType WrapActor<TActorType>(ObjectCreator<IActor> creator) where TActorType : class, IActor
         {
             CreatorInterfaceInvocationHandler creatorInvocationHandler = new CreatorInterfaceInvocationHandler(creator, s_GlobalProxyFactory);
-            return (TActorType) s_GlobalProxyFactory.CreateInterfaceProxy(creatorInvocationHandler, typeof(TActorType), true);
+            return (TActorType)s_GlobalProxyFactory.CreateInterfaceProxy(creatorInvocationHandler, typeof(TActorType), true);
+        }
+
+        /// <summary>
+        /// Wraps up an existing raw actor to make it callable safely. Don't call the raw actor before doing this!!
+        /// </summary>
+        /// <typeparam name="TActorType">The interface of the actor to create.</typeparam>
+        /// <param name="actor">The raw actor to wrap.</param>
+        /// <returns>An actor of type TInterface.</returns>
+        public static TActorType WrapActor<TActorType>(TActorType actor) where TActorType : class, IActor
+        {
+            ActorInterfaceInvocationHandler actorInterfaceInvocationHandler = new ActorInterfaceInvocationHandler(actor, actor, s_GlobalProxyFactory);
+            return (TActorType)s_GlobalProxyFactory.CreateInterfaceProxy(actorInterfaceInvocationHandler, typeof(TActorType), true);
         }
 
         /// <summary>
