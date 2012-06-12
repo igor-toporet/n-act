@@ -113,33 +113,41 @@ namespace NAct
         private void RunNextQueueItem(IActor actor, Queue<Action> queueForThisObject)
         {
             // Set the SyncronizationContext in case we end up awaiting a Task
+            SynchronizationContext oldSynchronizationContext = SynchronizationContext.Current;
             SynchronizationContext.SetSynchronizationContext(new ActorSynchronizationContext(DoInRightThread));
 
-            Hooking.BeforeActorMethodRun(m_Root.GetType(), m_TargetMethod);
-
-            Action action;
-            lock (queueForThisObject)
+            try
             {
-                if (queueForThisObject.Count > 0)
+                Hooking.BeforeActorMethodRun(m_Root.GetType(), m_TargetMethod);
+
+                Action action;
+                lock (queueForThisObject)
                 {
-                    action = queueForThisObject.Dequeue();
-                }
-                else
-                {
-                    action = null;
-                }
-                if (queueForThisObject.Count == 0)
-                {
-                    lock (s_JobQueues)
+                    if (queueForThisObject.Count > 0)
                     {
-                        // Remove from the dictionary so we do not stop the actor being garbage collected
-                        s_JobQueues.Remove(actor);
+                        action = queueForThisObject.Dequeue();
+                    }
+                    else
+                    {
+                        action = null;
+                    }
+                    if (queueForThisObject.Count == 0)
+                    {
+                        lock (s_JobQueues)
+                        {
+                            // Remove from the dictionary so we do not stop the actor being garbage collected
+                            s_JobQueues.Remove(actor);
+                        }
                     }
                 }
+                if (action != null)
+                {
+                    action();
+                }
             }
-            if (action != null)
+            finally
             {
-                action();
+                SynchronizationContext.SetSynchronizationContext(oldSynchronizationContext);
             }
         }
 
